@@ -1,52 +1,73 @@
-# 知乎每日新闻RSS生成器
+# 每天60秒读懂世界
 
-这个项目用于爬取知乎上的每日新闻，并生成RSS格式的XML文件。
+> 每天60秒读懂世界 — AI精选全球最新15条热点新闻，自动生成TTS语音播报与精美分享卡片
 
-## 功能
+**[🌐 在线页面](https://nodesire7.github.io/60s/)** | **[🎧 今日音频](https://nodesire7.github.io/60s/60s.mp3)**
 
-- 爬取知乎搜索页面中的"每日新闻"
-- 筛选包含当前日期的新闻
-- 选择最新发布的新闻
-- 提取新闻内容
-- 生成RSS格式的XML文件
+## 功能特性
 
-## 安装
+- **AI精选新闻** — 每日自动抓取最新15条全球热点，含微语金句
+- **TTS语音播报** — edge-tts合成中文语音，可直接播放收听
+- **精美分享卡片** — WebP截图生成，650px宽度适配手机分享
+- **按周配色** — 12种主题颜色每周轮换，视觉不单调
+- **GitHub Pages** — 自动部署静态页面，支持音频播放
+- **定时构建** — 凌晨5点生成，8点复查，保证每日更新
 
-1. 克隆此仓库
-2. 安装所需依赖：
-   ```
-   pip install -r requirements.txt
-   ```
-3. 确保已安装Microsoft Edge浏览器
+## 页面截图
 
-## 使用方法
+| 日期卡片 | 新闻列表 | 音频播放 |
+|:---:|:---:|:---:|
+| 按周配色 + 农历显示 | 15条精炼新闻 | 一键播放60s.mp3 |
 
-直接运行脚本：
+## 技术栈
+
+| 模块 | 技术 |
+|------|------|
+| 新闻抓取 | Python + Requests + BeautifulSoup |
+| RSS生成 | feedgen |
+| TTS语音 | edge-tts (VITS API备用) |
+| 截图生成 | Selenium + Chrome Headless + Pillow |
+| 前端页面 | HTML5 + CSS3 + Vanilla JS |
+| 自动部署 | GitHub Actions + GitHub Pages |
+| 广告 | Google AdSense Auto Ads |
+
+## 项目结构
 
 ```
-python scraper.py
+├── sixty_seconds_daily.py   # 主编排：API → RSS → TTS → WebP
+├── rss_to_tts.py            # RSS XML → 语音合成
+├── scrapers*.py             # 多种爬虫实现
+├── generate_webp.py         # 独立截图工具
+├── 60s.html / index.html    # 页面模板
+├── .github/workflows/       # CI/CD 定时构建
+├── zhihu_daily_news.xml     # 每日RSS数据
+└── 60s.mp3 / 60s.webp       # 每日输出产物
 ```
 
-脚本将使用您的Edge浏览器和默认配置文件，这意味着它会使用您已登录的知乎账号和cookie来访问内容。
+## 本地使用
 
-如果遇到问题，可以尝试：
-1. 确保Edge浏览器路径正确，默认为`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
-2. 确保用户数据目录路径正确，默认为`C:\Users\Administrator\AppData\Local\Microsoft\Edge\User Data`
-3. 查看生成的`zhihu_page.html`或`article_page.html`文件，分析页面结构
+```bash
+pip install -r requirements.txt
 
-运行成功后，将在当前目录生成`zhihu_daily_news.xml`文件，可以将其导入到RSS阅读器中。
+# 完整流程
+python sixty_seconds_daily.py
 
-## 技术说明
+# 仅生成TTS
+python rss_to_tts.py --output 60s
 
-本项目使用以下主要库：
-- requests: 发送HTTP请求
-- BeautifulSoup4: 解析HTML内容
-- Selenium: 自动化浏览器操作，处理动态加载内容
-- feedgen: 生成RSS格式文件
+# 仅生成截图（需要浏览器）
+python generate_webp.py
+```
 
-## 注意事项
+## 定时构建
 
-- 脚本使用您已登录的Edge浏览器配置文件，因此您需要已经在Edge中登录知乎。
-- 脚本依赖于知乎页面的结构，如果知乎页面结构变更，可能需要更新选择器。
-- 使用已登录的浏览器配置文件可以绕过知乎的大部分反爬机制。
-- 如需修改浏览器配置文件路径，请编辑脚本中的`user-data-dir`参数。 
+GitHub Actions 每日自动执行：
+
+| 时间 | 操作 |
+|------|------|
+| 凌晨 5:00 (Beijing) | 完整构建：API获取 → RSS → TTS → WebP |
+| 早上 8:00 (Beijing) | 复查：若未更新则重试 |
+
+## 许可
+
+文本由AI生成，仅供参考。代码开源。
