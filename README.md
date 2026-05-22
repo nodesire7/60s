@@ -2,7 +2,11 @@
 
 > 每天60秒读懂世界 — AI精选全球最新15条热点新闻，自动生成TTS语音播报与精美分享卡片
 
-**[🌐 在线页面](https://nodesire7.github.io/60s/)** | **[🎧 今日音频](https://nodesire7.github.io/60s/60s.mp3)**
+[![Daily Build](https://github.com/nodesire7/60s/actions/workflows/daily-build.yml/badge.svg)](https://github.com/nodesire7/60s/actions/workflows/daily-build.yml)
+[![GitHub Pages](https://img.shields.io/badge/Pages-Online-brightgreen)](https://nodesire7.github.io/60s/)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+
+**[🌐 在线页面](https://nodesire7.github.io/60s/)** | **[🎧 今日音频](https://nodesire7.github.io/60s/60s.mp3)** | **[📊 构建历史](https://github.com/nodesire7/60s/actions)**
 
 ## 功能特性
 

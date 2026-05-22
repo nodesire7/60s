@@ -371,6 +371,44 @@
             to { opacity: 1; }
         }
 
+        /* 构建状态栏 */
+        .build-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 11px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            border: 1px dashed #e0e0e0;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .build-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            flex-shrink: 0;
+            animation: statusPulse 2s infinite;
+        }
+
+        .build-status-dot.stale {
+            background: #FF9800;
+        }
+
+        .build-status-dot.error {
+            background: #F44336;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         /* 加载状态 */
         .loading {
             padding: 20px 0;
@@ -400,6 +438,15 @@
         <header>
             <h1>每天60秒读懂世界</h1>
         </header>
+
+        <!-- 构建状态 -->
+        <div class="build-status-bar" id="buildStatus">
+            <span style="display:flex;align-items:center;gap:6px">
+                <span class="build-status-dot" id="statusDot"></span>
+                <span id="statusText">SYSTEM: 60S_DAILY_NEWS</span>
+            </span>
+            <span id="lastSync">LAST_SYNC: --</span>
+        </div>
 
         <!-- 音频播放器 -->
         <div class="audio-player-bar" id="audioPlayer">
@@ -504,6 +551,26 @@
                 const latestItem = items[0];
                 const description = latestItem.getElementsByTagName('description')[0].textContent;
                 const lines = description.split('\n').filter(line => line.trim());
+
+                // 更新构建状态
+                const pubDateEl = latestItem.getElementsByTagName('pubDate')[0];
+                if (pubDateEl) {
+                    const pubDate = new Date(pubDateEl.textContent);
+                    const pad = n => String(n).padStart(2, '0');
+                    const syncStr = `${pubDate.getFullYear()}-${pad(pubDate.getMonth()+1)}-${pad(pubDate.getDate())} ${pad(pubDate.getHours())}:${pad(pubDate.getMinutes())}`;
+                    document.getElementById('lastSync').textContent = 'LAST_SYNC: ' + syncStr;
+
+                    // 判断新鲜度
+                    const hoursAgo = (Date.now() - pubDate.getTime()) / 3600000;
+                    const dot = document.getElementById('statusDot');
+                    if (hoursAgo > 48) {
+                        dot.classList.add('error');
+                        document.getElementById('statusText').textContent = 'SYSTEM: 60S_DAILY_NEWS [STALE]';
+                    } else if (hoursAgo > 24) {
+                        dot.classList.add('stale');
+                        document.getElementById('statusText').textContent = 'SYSTEM: 60S_DAILY_NEWS [DELAYED]';
+                    }
+                }
 
                 // 解析日期
                 const dateText = lines[0];
