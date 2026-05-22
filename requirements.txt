@@ -1,0 +1,30 @@
+# 每天60秒读懂世界 - Python依赖包
+# 主要依赖
+
+# 网页截图和自动化
+playwright>=1.40.0
+
+# 图像处理
+Pillow>=10.0.0
+
+# RSS生成
+feedgen>=1.0.0
+
+# 时区支持
+pytz>=2023.3
+
+# 网页解析
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# HTTP请求
+requests>=2.31.0
+
+# 安装说明：
+# 1. 安装Python依赖: pip install -r requirements.txt
+# 2. 安装Playwright浏览器: playwright install chromium
+
+# Windows环境特别说明：
+# 1. 确保在虚拟环境中运行
+# 2. 使用: python install_windows.py 进行自动安装
+# 3. 如果遇到权限问题，请以管理员身份运行命令提示符

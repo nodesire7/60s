@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="background-color: #f0f0f0 !important;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>每天60秒读懂世界</title>
+    <meta name="description" content="每天60秒读懂世界，AI精选全球最新、最重要的15条热点新闻">
+    <link rel="shortcut icon" href="favicon.svg" type="image/svg+xml">
+    
+    <style>
+        :root {
+            --background-color: #f0f0f0 !important;
+            --card-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+            --card-bg-color: #F44336; 
+        }
+        
+        html, body {
+            background-color: #f0f0f0 !important;
+        }
+        
+        /* 隐藏所有交互元素 */
+        .actions, .action-button, #refreshButton, #shareButton,
+        .audio-button, #audio-button, audio, [id*="audio"], [class*="audio"],
+        .audio-controls, .btn-primary, .offline-alert {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            position: absolute !important;
+            z-index: -9999 !important;
+            overflow: hidden !important;
+        }
+        
+        /* 取消所有动画和过渡效果 */
+        * {
+            animation: none !important;
+            transition: none !important;
+        }
+        
+        /* 确保标题颜色与日期卡片背景色一致 */
+        header h1 {
+            color: var(--card-bg-color) !important;
+            font-size: 24px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-weight: bold !important;
+            background-color: transparent !important;
+            letter-spacing: 1px !important;
+        }
+        
+        /* 新闻容器样式 */
+        .news-container {
+            padding: 15px !important;
+            margin: 0 !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+            border: none !important;
+        }
+
+        /* 优化新闻项：采用 Flex 布局实现完美的标签与文本对齐 */
+        .news-item {
+            margin-bottom: 12px !important;
+            padding: 8px 0 12px 0 !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            background-color: #ffffff !important;
+            
+            display: flex !important;
+            align-items: flex-start !important; /* 确保整体顶部对齐，由内部计算行高对齐 */
+        }
+        
+        .news-item:last-child {
+            margin-bottom: 0 !important;
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+        }
+
+        /* 独立出的序号标签容器 */
+        .news-number-box {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+            width: 32px !important;
+            /* 关键算法：高度必须等于文本的单行行高 (26px * 1.6 = 41.6px)，确保圆圈在第一行绝对垂直居中 */
+            height: 41.6px !important; 
+            margin-right: 12px !important;
+        }
+        
+        /* 内部圆形数字标签 */
+        .news-number {
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 50% !important;
+            background-color: var(--card-bg-color) !important;
+            color: white !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        /* 纯文本内容块 */
+        .news-content {
+            flex: 1 !important;
+            font-size: 26px !important;
+            line-height: 1.6 !important;
+            color: #333333 !important;
+            text-align: justify !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* 微语样式 */
+        .hitokoto {
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            padding: 15px 30px !important;
+            font-size: 21px !important;
+            line-height: 1.6 !important;
+            color: #757575 !important;
+            text-align: center !important;
+            font-style: italic !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 0 !important;
+            position: relative !important;
+            width: 100% !important;
+            display: block !important;
+            box-sizing: border-box;
+        }
+        
+        .hitokoto::before {
+            content: "\201C" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            left: 12px !important;
+            top: -2px !important;
+        }
+        
+        .hitokoto::after {
+            content: "\201D" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            right: 12px !important;
+            bottom: -20px !important;
+        }
+        
+        /* 日期区域样式 */
+        .today-date {
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        
+        /* 应用容器样式 */
+        .app-container {
+            padding: 8px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: auto !important;
+            gap: 8px !important;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            background-color: #f0f0f0 !important;
+        }
+        
+        /* 日期卡片样式 */
+        .date-card {
+            display: flex;
+            background-color: var(--card-bg-color);
+            color: white;
+            border-radius: 12px !important;
+            overflow: hidden;
+            min-height: 100px;
+            margin-bottom: 0 !important;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25) !important;
+            border: none !important;
+        }
+        
+        .date-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('css/bg_small.webp') !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            opacity: 0.3 !important;
+            z-index: -1;
+            mix-blend-mode: overlay !important;
+            border-radius: 12px;
+        }
+        
+        .date-left, .lunar-section {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            padding: 15px;
+        }
+        
+        .date-left::after, .lunar-section::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 30%;
+            height: 40%;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        
+        .weekday-en {
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        
+        .weekday-cn {
+            font-size: 26px;
+            font-weight: bold;
+        }
+        
+        .date-right, .gregorian-section {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .date-full, .gregorian-date {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .date-lunar, .lunar-date {
+            font-size: 18px !important;
+            opacity: 1;
+            color: rgba(255, 255, 255, 1);
+            letter-spacing: 1px;
+            margin-top: 2px;
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 页脚样式 */
+        footer {
+            text-align: center !important;
+            padding: 8px 0 !important;
+            color: #757575 !important;
+            font-size: 12px !important;
+            margin-top: 0 !important;
+            margin-bottom: 5px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-top: none !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+        }
+        
+        footer p {
+            display: flex !important;
+            align-items: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        footer a {
+            color: var(--card-bg-color) !important;
+            text-decoration: none !important;
+        }
+        
+        .author-avatar {
+            width: 16px !important;
+            height: 16px !important;
+            border-radius: 50% !important;
+            margin-right: 5px !important;
+        }
+        
+        header {
+            margin: 0 !important;
+            text-align: center !important;
+            background-color: transparent !important;
+            border-radius: 0 !important;
+            padding: 8px 0 4px !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="weekday-fri">
+    <div class="app-container" id="captureContent">
+        <header>
+            <h1>每天60秒读懂世界</h1>
+        </header>
+        
+        <div class="today-date" id="today-date">
+            <div class="date-card weekday-fri">
+                <div class="lunar-section">
+                    <div class="weekday-en">FRIDAY</div>
+                    <div class="weekday-cn">星期五</div>
+                </div>
+                <div class="gregorian-section">
+                    <div class="gregorian-date">2026年5月22日</div>
+                    <div class="lunar-date">丙午年(马年) 四月初六</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hitokoto">在我们能掌控和拼搏的时间里，去提升我们生命的质量。</div>
+        
+        <div class="news-container" id="newsContainer">
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">1</div></div>
+                <div class="news-content">广东进入“龙舟水”时期：预计全省平均雨量450毫米，略多于历史同期；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">2</div></div>
+                <div class="news-content">市监总局：今年4月中国企业信用指数为162.41，持续保持向好态势；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">3</div></div>
+                <div class="news-content">上海二手房“收储”将扩围至全部中心城区，试点三区已收购523套房源；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">4</div></div>
+                <div class="news-content">桂林一米粉店被曝“阴阳菜单”，本地人7元外地游客13元，当地通报：涉事店铺停业整改；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">5</div></div>
+                <div class="news-content">足协公布第三批处罚名单：17人被终身禁足，48人禁足五年或以下；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">6</div></div>
+                <div class="news-content">国产质子装置获重大突破，360度旋转治疗室在瑞金医院启用；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">7</div></div>
+                <div class="news-content">特斯拉官宣监督版FSD将登陆中国，正急招智驾测试技师，覆盖北上广深等9城，官方客服：正积极推进审批；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">8</div></div>
+                <div class="news-content">OpenAI宣布通用推理模型解决困扰人类80年的单位距离问题，彻底震惊整个数学界；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">9</div></div>
+                <div class="news-content">今年以来我国造船业拿下全球超九成的超大型油轮新船订单，订单已排到2030年；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">10</div></div>
+                <div class="news-content">日媒：今年前4个月澳大利亚进口中国汽车10.72万辆，首次超过日本汽车9.45万辆，终结日系28年主导地位；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">11</div></div>
+                <div class="news-content">美媒：SpaceX启动史上最大IPO，估值或高达1.75万亿美元，马斯克有望成为全球首个万亿富翁；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">12</div></div>
+                <div class="news-content">美媒：特朗普一季度买卖股票3600多次，平均每天交易近50次，涉及英伟达、苹果、波音等公司股票；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">13</div></div>
+                <div class="news-content">外媒：94岁古巴革命领袖卡斯特罗被美国起诉，古巴回应：美此举缺乏合法性；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">14</div></div>
+                <div class="news-content">美媒：报道称特朗普政府已开始制定对古巴军事行动方案；美军尼米兹号航母打击群已进入加勒比海；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">15</div></div>
+                <div class="news-content">外媒：伊美将在朝觐季结束后举行新一轮谈判；阿联酋绕霍尔木兹海峡输油管道建设完成近半，预计于2027年建成投运；</div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>
+                <img src="https://avatars.githubusercontent.com/u/63827263?v=4" alt="nodesire7" class="author-avatar">
+                <span>&copy; 2026 <a href="https://github.com/nodesire7" target="_blank">nodesire7</a> | 文本由AI生成，仅供参考</span>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        window.isWebpCaptureMode = true;
+        
+        const now = new Date();
+        const day = now.getDay(); 
+        const weekdaysClass = ['weekday-sun', 'weekday-mon', 'weekday-tue', 'weekday-wed', 'weekday-thu', 'weekday-fri', 'weekday-sat'];
+        const weekdayColors = { 0: '#FF5722', 1: '#4CAF50', 2: '#2196F3', 3: '#FF9800', 4: '#9C27B0', 5: '#F44336', 6: '#E91E63' };
+        
+        document.body.classList.add(weekdaysClass[day]);
+        document.documentElement.style.setProperty('--card-bg-color', weekdayColors[day]);
+
+        async function loadNewsFromXML() { console.log("静态数据注入完成。"); }
+        async function updateDateDisplay(text) { console.log("日期渲染完成。"); }
+        function addNewsItem(text, number) {}
+        function addHitokoto(text) {}
+
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'webp-capture-ready', 
+                        height: document.body.scrollHeight
+                    }, '*');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

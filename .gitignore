@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+env/
+myenv/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Claude Code local config
+.claude/
+
+# Temp files
+*.tmp
+*.temp
+temp/
+
+# TTS intermediate files (final output in root)
+tts/*.txt
+tts/*.mp3
+tts/*.xml
+
+# Screenshot debug
+debug_page.html
+article_page.html
+sogou_page.html
+*.html.bak
+
+# Credentials
+*credentials*
+*secret*
+*.pem
+*.key
+
+# Backup files
+*副本*
+*-副本*
+
+# Large binary blobs (keep only current)
+20*-*-*.mp3
+20*.png
+20*.webp
+!60s.mp3
+!60s.webp
+!css/bg_small.webp

@@ -1,0 +1,69 @@
+name: Daily 60s Build
+
+on:
+  schedule:
+    # 北京时间凌晨5点 (UTC 21:00)
+    - cron: '0 21 * * *'
+    # 北京时间早上8点复查 (UTC 00:00)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libasound2 libegl1 libopengl0 libwoff1
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install edge-tts selenium webdriver-manager Pillow
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: 'stable'
+
+      - name: Run 60s pipeline (RSS + TTS)
+        run: |
+          python sixty_seconds_daily.py --no-image
+          echo "--- XML preview ---"
+          head -20 zhihu_daily_news.xml
+
+      - name: Generate WebP screenshot
+        run: |
+          python generate_webp.py || echo "WebP generation skipped (non-critical)"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 60s.html index.html 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+            git commit -m "Daily build: $TODAY"
+            git push
+            echo "Pushed changes for $TODAY"
+          fi

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="background-color: #f0f0f0 !important;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>每天60秒读懂世界</title>
+    <meta name="description" content="每天60秒读懂世界，AI精选全球最新、最重要的15条热点新闻">
+    <link rel="shortcut icon" href="favicon.svg" type="image/svg+xml">
+
+    <style>
+        :root {
+            --background-color: #f0f0f0 !important;
+            --card-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+            --card-bg-color: #E74C3C;
+        }
+
+        html, body {
+            background-color: #f0f0f0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: auto !important;
+        }
+
+        /* 取消所有动画和过渡效果（截图模式） */
+        .webp-capture * {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        /* 音频播放按钮 */
+        .audio-player-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 10px 15px;
+            box-shadow: var(--card-shadow);
+            gap: 12px;
+            margin-bottom: 0;
+        }
+
+        .audio-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--card-bg-color);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .audio-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.3);
+        }
+
+        .audio-btn:active {
+            transform: scale(0.95);
+        }
+
+        .audio-btn.playing {
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+            50% { box-shadow: 0 0 0 8px rgba(0,0,0,0.08), 0 3px 8px rgba(0,0,0,0.2); }
+        }
+
+        .audio-progress {
+            flex: 1;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .audio-progress-fill {
+            height: 100%;
+            background: var(--card-bg-color);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .audio-time {
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+            min-width: 65px;
+            text-align: center;
+        }
+
+        /* 标题 */
+        header h1 {
+            color: var(--card-bg-color) !important;
+            font-size: 24px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-weight: bold !important;
+            background-color: transparent !important;
+            letter-spacing: 1px !important;
+        }
+
+        header {
+            margin: 0 !important;
+            text-align: center !important;
+            background-color: transparent !important;
+            border-radius: 0 !important;
+            padding: 8px 0 4px !important;
+            box-shadow: none !important;
+        }
+
+        /* 新闻容器 */
+        .news-container {
+            padding: 15px !important;
+            margin: 0 !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+            border: none !important;
+        }
+
+        .news-item {
+            margin-bottom: 12px !important;
+            padding: 8px 0 12px 0 !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            background-color: #ffffff !important;
+            display: flex !important;
+            align-items: flex-start !important;
+        }
+
+        .news-item:last-child {
+            margin-bottom: 0 !important;
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+        }
+
+        .news-number-box {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+            width: 32px !important;
+            height: 41.6px !important;
+            margin-right: 12px !important;
+        }
+
+        .news-number {
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 50% !important;
+            background-color: var(--card-bg-color) !important;
+            color: white !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        .news-content {
+            flex: 1 !important;
+            font-size: 26px !important;
+            line-height: 1.6 !important;
+            color: #333333 !important;
+            text-align: justify !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* 微语 */
+        .hitokoto {
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            padding: 15px 30px !important;
+            font-size: 21px !important;
+            line-height: 1.6 !important;
+            color: #757575 !important;
+            text-align: center !important;
+            font-style: italic !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 0 !important;
+            position: relative !important;
+            width: 100% !important;
+            display: block !important;
+            box-sizing: border-box;
+        }
+
+        .hitokoto::before {
+            content: "\201C" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            left: 12px !important;
+            top: -2px !important;
+        }
+
+        .hitokoto::after {
+            content: "\201D" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            right: 12px !important;
+            bottom: -20px !important;
+        }
+
+        /* 日期卡片 */
+        .today-date {
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        .date-card {
+            display: flex;
+            background-color: var(--card-bg-color);
+            color: white;
+            border-radius: 12px !important;
+            overflow: hidden;
+            min-height: 100px;
+            margin-bottom: 0 !important;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25) !important;
+            border: none !important;
+        }
+
+        .date-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('css/bg_small.webp') !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            opacity: 0.3 !important;
+            z-index: -1;
+            mix-blend-mode: overlay !important;
+            border-radius: 12px;
+        }
+
+        .lunar-section {
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            padding: 15px;
+        }
+
+        .lunar-section::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 30%;
+            height: 40%;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .weekday-en {
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        .weekday-cn {
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .gregorian-section {
+            flex: 1;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .gregorian-date {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .lunar-date {
+            font-size: 18px !important;
+            opacity: 1;
+            color: rgba(255, 255, 255, 1);
+            letter-spacing: 1px;
+            margin-top: 2px;
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }
+
+        .app-container {
+            padding: 8px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: auto !important;
+            gap: 8px !important;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            background-color: #f0f0f0 !important;
+        }
+
+        /* 页脚 */
+        footer {
+            text-align: center !important;
+            padding: 8px 0 !important;
+            color: #757575 !important;
+            font-size: 12px !important;
+            margin-top: 0 !important;
+            margin-bottom: 5px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-top: none !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+        }
+
+        footer p {
+            display: flex !important;
+            align-items: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        footer a {
+            color: var(--card-bg-color) !important;
+            text-decoration: none !important;
+        }
+
+        .author-avatar {
+            width: 16px !important;
+            height: 16px !important;
+            border-radius: 50% !important;
+            margin-right: 5px !important;
+        }
+
+        .fade-in {
+            opacity: 1;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 加载状态 */
+        .loading {
+            padding: 20px 0;
+            text-align: center;
+            color: #999;
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .news-content { font-size: 20px !important; }
+            .gregorian-date { font-size: 22px !important; }
+            .weekday-cn { font-size: 22px !important; }
+            .weekday-en { font-size: 16px !important; }
+            .lunar-date { font-size: 14px !important; }
+            header h1 { font-size: 20px !important; }
+            .hitokoto { font-size: 18px !important; padding: 10px 20px !important; }
+        }
+    </style>
+
+    <!-- Google AdSense Auto Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9956808351564739" crossorigin="anonymous"></script>
+    <!-- Ads.txt 声明 -->
+    <meta name="adsense-ads.txt" content="google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0">
+</head>
+<body>
+    <div class="app-container" id="captureContent">
+        <header>
+            <h1>每天60秒读懂世界</h1>
+        </header>
+
+        <!-- 音频播放器 -->
+        <div class="audio-player-bar" id="audioPlayer">
+            <button class="audio-btn" id="audioBtn" aria-label="播放/暂停" title="播放/暂停">
+                ▶
+            </button>
+            <div class="audio-progress" id="audioProgressBar">
+                <div class="audio-progress-fill" id="audioProgressFill"></div>
+            </div>
+            <span class="audio-time" id="audioTime">00:00 / 00:00</span>
+        </div>
+
+        <!-- 日期卡片 -->
+        <div class="today-date" id="today-date">
+            <div class="date-card fade-in">
+                <div class="lunar-section">
+                    <div class="weekday-en" id="weekdayEn">FRIDAY</div>
+                    <div class="weekday-cn" id="weekdayCn">星期五</div>
+                </div>
+                <div class="gregorian-section">
+                    <div class="gregorian-date" id="gregorianDate">2026年5月22日</div>
+                    <div class="lunar-date" id="lunarDate">丙午年(马年) 四月初六</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 微语 -->
+        <div class="hitokoto" id="hitokoto">在我们能掌控和拼搏的时间里，去提升我们生命的质量。</div>
+
+        <!-- 新闻列表 -->
+        <div class="news-container" id="newsContainer">
+            <div id="loading" class="loading">加载中...</div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer>
+            <p>
+                <img src="https://avatars.githubusercontent.com/u/63827263?v=4" alt="nodesire7" class="author-avatar">
+                <span>&copy; 2026 <a href="https://github.com/nodesire7" target="_blank">nodesire7</a> | 文本由AI生成，仅供参考</span>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        window.isWebpCaptureMode = false;
+
+        // ========== 按周颜色主题 ==========
+        (function() {
+            const now = new Date();
+
+            function getWeekNumber(d) {
+                const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                const dayNum = date.getUTCDay() || 7;
+                date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+                const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+                return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+            }
+
+            const weekNumber = getWeekNumber(now);
+
+            const weeklyColors = [
+                '#E74C3C', '#E67E22', '#F39C12', '#27AE60',
+                '#1ABC9C', '#2980B9', '#8E44AD', '#E91E63',
+                '#16A085', '#D35400', '#2C3E50', '#C0392B'
+            ];
+
+            const colorIndex = (weekNumber - 1) % 12;
+            const weekColor = weeklyColors[colorIndex];
+            document.documentElement.style.setProperty('--card-bg-color', weekColor);
+
+            // 存储当前周数用于 footer 年份
+            window._currentYear = now.getFullYear();
+            window._weekNumber = weekNumber;
+            window._weekColor = weekColor;
+        })();
+
+        // ========== 星期/日期本地化 ==========
+        const weekdayMap = {
+            0: { en: 'SUNDAY', zh: '星期日' },
+            1: { en: 'MONDAY', zh: '星期一' },
+            2: { en: 'TUESDAY', zh: '星期二' },
+            3: { en: 'WEDNESDAY', zh: '星期三' },
+            4: { en: 'THURSDAY', zh: '星期四' },
+            5: { en: 'FRIDAY', zh: '星期五' },
+            6: { en: 'SATURDAY', zh: '星期六' }
+        };
+
+        // ========== 从 XML 加载新闻 ==========
+        async function loadNewsFromXML() {
+            const newsContainer = document.getElementById('newsContainer');
+            const loading = document.getElementById('loading');
+
+            try {
+                const response = await fetch('./zhihu_daily_news.xml?' + Date.now());
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                const items = xmlDoc.getElementsByTagName('item');
+
+                if (items.length === 0) throw new Error('没有找到新闻内容');
+
+                const latestItem = items[0];
+                const description = latestItem.getElementsByTagName('description')[0].textContent;
+                const lines = description.split('\n').filter(line => line.trim());
+
+                // 解析日期
+                const dateText = lines[0];
+                updateDateDisplay(dateText);
+
+                // 清除加载状态
+                if (loading) loading.style.display = 'none';
+                newsContainer.innerHTML = '';
+
+                // 提取微语
+                let hitokoto = '';
+                for (const line of lines) {
+                    if (line.includes('【微语】') || line.includes('【#今日微语】') || line.includes('【#今日早报微语】')) {
+                        hitokoto = line.replace(/【#今日早报微语】：|【#今日微语】：|【#今日早报微语】|【#今日微语】|【微语】[：:]?\s*/, '').trim();
+                        break;
+                    }
+                }
+                if (hitokoto) {
+                    document.getElementById('hitokoto').textContent = hitokoto;
+                }
+
+                // 收集新闻
+                const newsItems = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.includes('微语') || line.includes('来源：每天60秒读懂世界')) continue;
+                    const match = line.match(/^(\d+)[、.．]/);
+                    if (match) {
+                        newsItems.push({ number: match[1], text: line.replace(/^\d+[、.．]\s*/, '') });
+                    }
+                }
+
+                const displayItems = newsItems.slice(0, 15);
+                displayItems.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'news-item';
+                    div.innerHTML = `
+                        <div class="news-number-box"><div class="news-number">${item.number}</div></div>
+                        <div class="news-content">${item.text}</div>`;
+                    newsContainer.appendChild(div);
+                });
+
+                console.log(`Loaded ${displayItems.length} news items`);
+
+            } catch (error) {
+                console.warn('XML load failed, using static content:', error.message);
+                if (loading) loading.textContent = '文本由AI生成，仅供参考';
+            }
+        }
+
+        function updateDateDisplay(dateText) {
+            const parts = dateText.split('，');
+            let year, month, date, weekday, lunarDateText;
+
+            const dateMatch = parts[0] && parts[0].match(/(\d+)年(\d+)月(\d+)日/);
+            if (dateMatch) {
+                year = dateMatch[1]; month = dateMatch[2]; date = dateMatch[3];
+            }
+
+            const now = new Date();
+            if (!year) { year = now.getFullYear(); month = now.getMonth() + 1; date = now.getDate(); }
+
+            const dayIndex = now.getDay();
+            const wd = weekdayMap[dayIndex];
+
+            // 更新日期显示
+            document.getElementById('weekdayEn').textContent = wd.en;
+            document.getElementById('weekdayCn').textContent = wd.zh;
+            document.getElementById('gregorianDate').textContent = `${year}年${month}月${date}日`;
+
+            // 农历
+            if (parts && parts[2]) {
+                const lunar = parts[2].replace('农历', '').trim();
+                document.getElementById('lunarDate').textContent = lunar;
+            }
+
+            // 更新 footer 年份
+            const footerSpan = document.querySelector('footer span');
+            if (footerSpan) {
+                footerSpan.innerHTML = footerSpan.innerHTML.replace(/© \d{4}/, `© ${year}`);
+            }
+
+            window._currentYear = year;
+        }
+
+        // ========== 音频播放器 ==========
+        (function() {
+            const audio = new Audio('60s.mp3');
+            audio.preload = 'auto';
+
+            const btn = document.getElementById('audioBtn');
+            const progressBar = document.getElementById('audioProgressBar');
+            const progressFill = document.getElementById('audioProgressFill');
+            const timeDisplay = document.getElementById('audioTime');
+
+            let isPlaying = false;
+
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60);
+                const s = Math.floor(seconds % 60);
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+
+            btn.addEventListener('click', function() {
+                if (isPlaying) {
+                    audio.pause();
+                } else {
+                    audio.play().catch(e => console.warn('Audio play failed:', e));
+                }
+            });
+
+            audio.addEventListener('play', function() {
+                isPlaying = true;
+                btn.textContent = '⏸';
+                btn.classList.add('playing');
+            });
+
+            audio.addEventListener('pause', function() {
+                isPlaying = false;
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+            });
+
+            audio.addEventListener('ended', function() {
+                isPlaying = false;
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+                progressFill.style.width = '0%';
+                timeDisplay.textContent = '00:00 / ' + formatTime(audio.duration || 0);
+            });
+
+            audio.addEventListener('loadedmetadata', function() {
+                timeDisplay.textContent = '00:00 / ' + formatTime(audio.duration);
+            });
+
+            audio.addEventListener('timeupdate', function() {
+                if (audio.duration) {
+                    const pct = (audio.currentTime / audio.duration) * 100;
+                    progressFill.style.width = pct + '%';
+                    timeDisplay.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+                }
+            });
+
+            progressBar.addEventListener('click', function(e) {
+                if (!audio.duration) return;
+                const rect = progressBar.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                audio.currentTime = pct * audio.duration;
+            });
+        })();
+
+        // ========== 页面初始化 ==========
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 加载新闻
+            await loadNewsFromXML();
+
+            // 截图模式通知
+            setTimeout(function() {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'webp-capture-ready',
+                        height: document.body.scrollHeight
+                    }, '*');
+                }
+            }, 1000);
+        });
+    </script>
+
+    <!-- Ads.txt 隐藏声明 -->
+    <pre id="ads-txt" style="display:none">google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0</pre>
+</body>
+</html>
