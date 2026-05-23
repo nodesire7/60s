@@ -26,10 +26,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install system dependencies (Chrome headless)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libasound2 libegl1 libopengl0 libwoff1
+          sudo apt-get install -y -qq libegl1 libopengl0 libgbm1 libnss3 libatk-bridge2.0-0 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 2>&1 | tail -5
 
       - name: Install Python dependencies
         run: |
@@ -39,30 +39,29 @@ jobs:
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: 'stable'
 
       - name: Run 60s pipeline (RSS + TTS)
         run: |
+          echo "=== 执行每日构建 $(TZ='Asia/Shanghai' date) ==="
           python sixty_seconds_daily.py --no-image
-          echo "--- XML preview ---"
+          echo "=== XML 内容预览 ==="
           head -20 zhihu_daily_news.xml
 
       - name: Generate WebP screenshot
         run: |
-          python generate_webp.py || echo "WebP generation skipped (non-critical)"
+          python generate_webp.py || echo "[WARN] WebP generation skipped (non-critical)"
 
-      - name: Commit and push
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 60s.html index.html 2>/dev/null || true
+          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+            TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
             git commit -m "Daily build: $TODAY"
             git push
             echo "Pushed changes for $TODAY"
