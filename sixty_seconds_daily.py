@@ -320,26 +320,15 @@ def generate_static_html(api_data):
     if not content:
         news_list = api_data.get("news", [])
         if news_list:
+            # API返回的news条目已自带序号（如"1、xxxx"），直接使用
             content_lines = [title, ""]
-            for i, news_item in enumerate(news_list, 1):
-                content_lines.append(f"{i}、{news_item}")
+            for news_item in news_list:
+                content_lines.append(news_item)
             content_lines.append("")
             weiyu = api_data.get("weiyu", "")
             if weiyu:
                 content_lines.append(f"【微语】{weiyu}")
             content = "\n".join(content_lines)
-
-    # 如果没有 content，从 news 列表构建
-    news_list = api_data.get("news", [])
-    if not content and news_list:
-        lines = [title, ""]
-        for i, item in enumerate(news_list, 1):
-            lines.append(f"{i}、{item}")
-        lines.append("")
-        weiyu = api_data.get("weiyu", "")
-        if weiyu:
-            lines.append(f"【微语】{weiyu}")
-        content = "\n".join(lines)
 
     # 解析新闻条目
     lines = content.split('\n')
