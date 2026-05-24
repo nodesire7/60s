@@ -280,24 +280,22 @@ def generate_static_html(api_data):
         year, month, day = now.year, now.month, now.day
         date_obj = now
 
-    weekday_cn = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][date_obj.weekday()]
-    weekday_en = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][
-        (date_obj.weekday() + 1) % 7  # Python weekday(): 0=Mon → JS getDay(): 0=Sun
-    ]
-    # Actually let's recalculate: Python weekday(): Monday=0, Sunday=6
-    # JS getDay(): Sunday=0, Monday=1, ..., Saturday=6
-    js_day = (date_obj.weekday() + 1) % 7  # Convert Python weekday to JS getDay
+    # Python weekday: 0=Mon → JS getDay: 0=Sun
+    js_day = (date_obj.weekday() + 1) % 7
     weekday_en = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][js_day]
     weekday_cn = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][js_day]
 
-    # ISO week number for 12-color rotation
-    iso_week = date_obj.isocalendar()[1]
-    weekly_colors = [
-        '#E74C3C', '#E67E22', '#F39C12', '#27AE60',
-        '#1ABC9C', '#2980B9', '#8E44AD', '#E91E63',
-        '#16A085', '#D35400', '#2C3E50', '#C0392B'
-    ]
-    week_color = weekly_colors[(iso_week - 1) % 12]
+    # 按星期几变换颜色（7色，周一到周日各不相同）
+    weekday_colors = {
+        0: '#FF5722',  # 周日 Sunday
+        1: '#4CAF50',  # 周一 Monday
+        2: '#2196F3',  # 周二 Tuesday
+        3: '#FF9800',  # 周三 Wednesday
+        4: '#9C27B0',  # 周四 Thursday
+        5: '#F44336',  # 周五 Friday
+        6: '#E91E63',  # 周六 Saturday
+    }
+    week_color = weekday_colors[js_day]
 
     # 获取农历信息
     lunar_info = ""
