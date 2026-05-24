@@ -91,8 +91,8 @@ def main():
             return 1
 
     try:
-        # 加载页面
-        page_url = f"http://localhost:{port}/60s.html"
+        # 加载页面（webp=1 隐藏音频播放器和构建状态栏）
+        page_url = f"http://localhost:{port}/60s.html?webp=1"
         print(f"加载页面: {page_url}")
         driver.get(page_url)
         time.sleep(3)

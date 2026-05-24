@@ -27,6 +27,12 @@
             transition: none !important;
         }
 
+        /* 截图模式下隐藏音频播放器和构建状态栏 */
+        .webp-capture .audio-player-bar,
+        .webp-capture .build-status-bar {
+            display: none !important;
+        }
+
         /* 音频播放按钮 */
         .audio-player-bar {
             display: flex;
@@ -491,12 +497,17 @@
     </div>
 
     <script>
-        window.isWebpCaptureMode = false;
+        window.isWebpCaptureMode = (function() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('webp') === '1';
+        })();
+
+        if (window.isWebpCaptureMode) {
+            document.documentElement.classList.add('webp-capture');
+        }
 
         // ========== 按周颜色主题 ==========
         (function() {
-            const now = new Date();
-
             function getWeekNumber(d) {
                 const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
                 const dayNum = date.getUTCDay() || 7;
@@ -505,22 +516,25 @@
                 return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
             }
 
-            const weekNumber = getWeekNumber(now);
-
-            const weeklyColors = [
+            window._weeklyColors = [
                 '#E74C3C', '#E67E22', '#F39C12', '#27AE60',
                 '#1ABC9C', '#2980B9', '#8E44AD', '#E91E63',
                 '#16A085', '#D35400', '#2C3E50', '#C0392B'
             ];
+            window._getWeekNumber = getWeekNumber;
 
-            const colorIndex = (weekNumber - 1) % 12;
-            const weekColor = weeklyColors[colorIndex];
-            document.documentElement.style.setProperty('--card-bg-color', weekColor);
+            function applyWeekColor(dateObj) {
+                const weekNumber = getWeekNumber(dateObj);
+                const colorIndex = (weekNumber - 1) % 12;
+                const weekColor = window._weeklyColors[colorIndex];
+                document.documentElement.style.setProperty('--card-bg-color', weekColor);
+                window._weekNumber = weekNumber;
+                window._weekColor = weekColor;
+                window._currentYear = dateObj.getFullYear();
+            }
 
-            // 存储当前周数用于 footer 年份
-            window._currentYear = now.getFullYear();
-            window._weekNumber = weekNumber;
-            window._weekColor = weekColor;
+            applyWeekColor(new Date());
+            window._applyWeekColor = applyWeekColor;
         })();
 
         // ========== 星期/日期本地化 ==========
@@ -627,14 +641,19 @@
 
             const dateMatch = parts[0] && parts[0].match(/(\d+)年(\d+)月(\d+)日/);
             if (dateMatch) {
-                year = dateMatch[1]; month = dateMatch[2]; date = dateMatch[3];
+                year = parseInt(dateMatch[1]); month = parseInt(dateMatch[2]); date = parseInt(dateMatch[3]);
             }
 
             const now = new Date();
             if (!year) { year = now.getFullYear(); month = now.getMonth() + 1; date = now.getDate(); }
 
-            const dayIndex = now.getDay();
+            // 根据XML解析的日期重新计算周颜色主题
+            const parsedDate = new Date(year, month - 1, date);
+            const dayIndex = parsedDate.getDay();
             const wd = weekdayMap[dayIndex];
+            if (window._applyWeekColor) {
+                window._applyWeekColor(parsedDate);
+            }
 
             // 更新日期显示
             document.getElementById('weekdayEn').textContent = wd.en;
