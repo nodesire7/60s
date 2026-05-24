@@ -260,6 +260,610 @@ def generate_rss_from_api_data(api_data):
         logger.error(f"从API数据生成RSS文件时出错: {e}")
         return False
 
+
+def generate_static_html(api_data):
+    """从API数据生成静态HTML页面，新闻数据直接嵌入，无需JS fetch"""
+    logger.info("开始生成静态HTML页面...")
+
+    # 解析日期
+    date_str = api_data.get("date", "")
+    if date_str:
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            year, month, day = date_obj.year, date_obj.month, date_obj.day
+        except:
+            now = datetime.now()
+            year, month, day = now.year, now.month, now.day
+            date_obj = now
+    else:
+        now = datetime.now()
+        year, month, day = now.year, now.month, now.day
+        date_obj = now
+
+    weekday_cn = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][date_obj.weekday()]
+    weekday_en = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][
+        (date_obj.weekday() + 1) % 7  # Python weekday(): 0=Mon → JS getDay(): 0=Sun
+    ]
+    # Actually let's recalculate: Python weekday(): Monday=0, Sunday=6
+    # JS getDay(): Sunday=0, Monday=1, ..., Saturday=6
+    js_day = (date_obj.weekday() + 1) % 7  # Convert Python weekday to JS getDay
+    weekday_en = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][js_day]
+    weekday_cn = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"][js_day]
+
+    # ISO week number for 12-color rotation
+    iso_week = date_obj.isocalendar()[1]
+    weekly_colors = [
+        '#E74C3C', '#E67E22', '#F39C12', '#27AE60',
+        '#1ABC9C', '#2980B9', '#8E44AD', '#E91E63',
+        '#16A085', '#D35400', '#2C3E50', '#C0392B'
+    ]
+    week_color = weekly_colors[(iso_week - 1) % 12]
+
+    # 获取农历信息
+    lunar_info = ""
+    lunar_date = api_data.get("lunar_date", "")
+    ganzhi = api_data.get("ganzhi", "")
+    zodiac = api_data.get("zodiac", "")
+    if ganzhi and zodiac:
+        if zodiac.endswith('年'):
+            zodiac = zodiac.rstrip('年')
+        lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}"
+    elif lunar_date:
+        lunar_info = lunar_date
+
+    # 生成标题
+    title = api_data.get("title", f"{year}年{month}月{day}日，{weekday_cn}，在这里每天读懂世界")
+    gregorian_date = f"{year}年{month}月{day}日"
+
+    # 构建内容文本（用于解析新闻条目和微语）
+    content = api_data.get("content", "")
+    if not content:
+        news_list = api_data.get("news", [])
+        if news_list:
+            content_lines = [title, ""]
+            for i, news_item in enumerate(news_list, 1):
+                content_lines.append(f"{i}、{news_item}")
+            content_lines.append("")
+            weiyu = api_data.get("weiyu", "")
+            if weiyu:
+                content_lines.append(f"【微语】{weiyu}")
+            content = "\n".join(content_lines)
+
+    # 如果没有 content，从 news 列表构建
+    news_list = api_data.get("news", [])
+    if not content and news_list:
+        lines = [title, ""]
+        for i, item in enumerate(news_list, 1):
+            lines.append(f"{i}、{item}")
+        lines.append("")
+        weiyu = api_data.get("weiyu", "")
+        if weiyu:
+            lines.append(f"【微语】{weiyu}")
+        content = "\n".join(lines)
+
+    # 解析新闻条目
+    lines = content.split('\n')
+    news_items = []
+    hitokoto = ""
+    for line in lines:
+        line_stripped = line.strip()
+        if not line_stripped:
+            continue
+        if '【微语】' in line_stripped or '【#今日微语】' in line_stripped or '【#今日早报微语】' in line_stripped:
+            hitokoto = line_stripped.replace('【#今日早报微语】：', '').replace('【#今日微语】：', '').replace('【#今日早报微语】', '').replace('【#今日微语】', '').replace('【微语】：', '').replace('【微语】:', '').replace('【微语】', '').strip()
+            continue
+        if '来源：' in line_stripped or line_stripped.startswith('每天60秒'):
+            continue
+        import re as _re
+        match = _re.match(r'^(\d+)[、.．]\s*', line_stripped)
+        if match:
+            num = match.group(1)
+            text = _re.sub(r'^\d+[、.．]\s*', '', line_stripped)
+            if text and len(news_items) < 15:
+                news_items.append((num, text))
+
+    # 如果还没有微语，尝试从API字段获取
+    if not hitokoto:
+        hitokoto = api_data.get("weiyu", "心事浩茫连广宇，于无声处听惊雷。")
+
+    # 生成新闻HTML
+    news_html_parts = []
+    for num, text in news_items:
+        news_html_parts.append(f'''            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">{num}</div></div>
+                <div class="news-content">{text}</div>
+            </div>''')
+
+    news_html = "\n".join(news_html_parts) if news_html_parts else '<div class="loading">暂无新闻数据</div>'
+
+    # 构建时间戳
+    from datetime import timezone as _tz, timedelta as _td
+    _cst = _tz(_td(hours=8))
+    build_time = datetime.now(_cst).strftime('%Y-%m-%d %H:%M')
+    sync_time = f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)} 05:00"
+
+    html = f'''<!DOCTYPE html>
+<html lang="zh-CN" style="background-color: #f0f0f0 !important;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>每天60秒读懂世界</title>
+    <meta name="description" content="每天60秒读懂世界，AI精选全球最新、最重要的15条热点新闻">
+    <link rel="shortcut icon" href="favicon.svg" type="image/svg+xml">
+
+    <style>
+        :root {{
+            --background-color: #f0f0f0 !important;
+            --card-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+            --card-bg-color: {week_color};
+        }}
+
+        html, body {{
+            background-color: #f0f0f0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: auto !important;
+        }}
+
+        .webp-capture * {{
+            animation: none !important;
+            transition: none !important;
+        }}
+
+        .webp-capture .audio-player-bar,
+        .webp-capture .build-status-bar {{
+            display: none !important;
+        }}
+
+        .audio-player-bar {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 10px 15px;
+            box-shadow: var(--card-shadow);
+            gap: 12px;
+            margin-bottom: 0;
+        }}
+
+        .audio-btn {{
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: none;
+            background-color: var(--card-bg-color);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }}
+
+        .audio-btn:hover {{ transform: scale(1.08); }}
+        .audio-btn:active {{ transform: scale(0.95); }}
+        .audio-btn.playing {{ animation: pulse 1.2s infinite; }}
+
+        @keyframes pulse {{
+            0%, 100% {{ box-shadow: 0 3px 8px rgba(0,0,0,0.2); }}
+            50% {{ box-shadow: 0 0 0 8px rgba(0,0,0,0.08), 0 3px 8px rgba(0,0,0,0.2); }}
+        }}
+
+        .audio-progress {{
+            flex: 1; height: 4px;
+            background: #e0e0e0; border-radius: 2px;
+            overflow: hidden; cursor: pointer;
+        }}
+
+        .audio-progress-fill {{
+            height: 100%;
+            background: var(--card-bg-color);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }}
+
+        .audio-time {{
+            font-size: 12px; color: #999;
+            flex-shrink: 0; min-width: 65px;
+            text-align: center;
+        }}
+
+        header h1 {{
+            color: var(--card-bg-color) !important;
+            font-size: 24px !important;
+            margin: 0 !important; padding: 0 !important;
+            font-weight: bold !important;
+            background-color: transparent !important;
+            letter-spacing: 1px !important;
+        }}
+
+        header {{
+            margin: 0 !important; text-align: center !important;
+            background-color: transparent !important;
+            border-radius: 0 !important;
+            padding: 8px 0 4px !important;
+            box-shadow: none !important;
+        }}
+
+        .news-container {{
+            padding: 15px !important; margin: 0 !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+            border: none !important;
+        }}
+
+        .news-item {{
+            margin-bottom: 12px !important;
+            padding: 8px 0 12px 0 !important;
+            border-bottom: 1px solid #f5f5f5 !important;
+            background-color: #ffffff !important;
+            display: flex !important;
+            align-items: flex-start !important;
+        }}
+
+        .news-item:last-child {{
+            margin-bottom: 0 !important;
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+        }}
+
+        .news-number-box {{
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+            width: 32px !important;
+            height: 41.6px !important;
+            margin-right: 12px !important;
+        }}
+
+        .news-number {{
+            width: 24px !important; height: 24px !important;
+            border-radius: 50% !important;
+            background-color: var(--card-bg-color) !important;
+            color: white !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }}
+
+        .news-content {{
+            flex: 1 !important;
+            font-size: 26px !important;
+            line-height: 1.6 !important;
+            color: #333333 !important;
+            text-align: justify !important;
+            margin: 0 !important; padding: 0 !important;
+        }}
+
+        .hitokoto {{
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            padding: 15px 30px !important;
+            font-size: 21px !important;
+            line-height: 1.6 !important;
+            color: #757575 !important;
+            text-align: center !important;
+            font-style: italic !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 0 !important;
+            position: relative !important;
+            width: 100% !important;
+            display: block !important;
+            box-sizing: border-box;
+        }}
+
+        .hitokoto::before {{
+            content: "\\201C" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            left: 12px !important; top: -2px !important;
+        }}
+
+        .hitokoto::after {{
+            content: "\\201D" !important;
+            font-size: 40px !important;
+            color: #e0e0e0 !important;
+            position: absolute !important;
+            right: 12px !important; bottom: -20px !important;
+        }}
+
+        .today-date {{
+            margin: 0 !important; width: 100% !important;
+        }}
+
+        .date-card {{
+            display: flex;
+            background-color: var(--card-bg-color);
+            color: white;
+            border-radius: 12px !important;
+            overflow: hidden;
+            min-height: 100px;
+            margin-bottom: 0 !important;
+            position: relative; z-index: 1;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25) !important;
+            border: none !important;
+        }}
+
+        .date-card::before {{
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url('css/bg_small.webp') !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            opacity: 0.3 !important;
+            z-index: -1;
+            mix-blend-mode: overlay !important;
+            border-radius: 12px;
+        }}
+
+        .lunar-section {{
+            width: 30%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative; z-index: 2;
+            padding: 15px;
+        }}
+
+        .lunar-section::after {{
+            content: '';
+            position: absolute;
+            right: 0; top: 30%;
+            height: 40%; width: 1px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+        }}
+
+        .weekday-en {{
+            font-size: 18px; font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px; letter-spacing: 1px;
+        }}
+
+        .weekday-cn {{ font-size: 26px; font-weight: bold; }}
+
+        .gregorian-section {{
+            flex: 1; padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }}
+
+        .gregorian-date {{
+            font-size: 28px; font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }}
+
+        .lunar-date {{
+            font-size: 18px !important; opacity: 1;
+            color: rgba(255, 255, 255, 1);
+            letter-spacing: 1px; margin-top: 2px;
+            font-weight: 500;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+        }}
+
+        .app-container {{
+            padding: 8px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: auto !important;
+            gap: 8px !important;
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            background-color: #f0f0f0 !important;
+        }}
+
+        footer {{
+            text-align: center !important;
+            padding: 8px 0 !important;
+            color: #757575 !important;
+            font-size: 12px !important;
+            margin-top: 0 !important;
+            margin-bottom: 5px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-top: none !important;
+            background-color: #ffffff !important;
+            border-radius: 12px !important;
+            box-shadow: var(--card-shadow) !important;
+        }}
+
+        footer p {{
+            display: flex !important;
+            align-items: center !important;
+            margin: 0 !important; padding: 0 !important;
+        }}
+
+        footer a {{
+            color: var(--card-bg-color) !important;
+            text-decoration: none !important;
+        }}
+
+        .author-avatar {{
+            width: 16px !important; height: 16px !important;
+            border-radius: 50% !important;
+            margin-right: 5px !important;
+        }}
+
+        .build-status-bar {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 11px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            border: 1px dashed #e0e0e0;
+            gap: 8px;
+            flex-wrap: wrap;
+        }}
+
+        .build-status-dot {{
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            flex-shrink: 0;
+        }}
+
+        @media (max-width: 600px) {{
+            .news-content {{ font-size: 20px !important; }}
+            .gregorian-date {{ font-size: 22px !important; }}
+            .weekday-cn {{ font-size: 22px !important; }}
+            .weekday-en {{ font-size: 16px !important; }}
+            .lunar-date {{ font-size: 14px !important; }}
+            header h1 {{ font-size: 20px !important; }}
+            .hitokoto {{ font-size: 18px !important; padding: 10px 20px !important; }}
+        }}
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9956808351564739" crossorigin="anonymous"></script>
+    <meta name="adsense-ads.txt" content="google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0">
+</head>
+<body>
+    <div class="app-container" id="captureContent">
+        <header>
+            <h1>每天60秒读懂世界</h1>
+        </header>
+
+        <div class="build-status-bar" id="buildStatus">
+            <span style="display:flex;align-items:center;gap:6px">
+                <span class="build-status-dot" id="statusDot"></span>
+                <span id="statusText">SYSTEM: 60S_DAILY_NEWS</span>
+            </span>
+            <span id="lastSync">LAST_SYNC: {sync_time}</span>
+        </div>
+
+        <div class="audio-player-bar" id="audioPlayer">
+            <button class="audio-btn" id="audioBtn" aria-label="播放/暂停" title="播放/暂停">▶</button>
+            <div class="audio-progress" id="audioProgressBar">
+                <div class="audio-progress-fill" id="audioProgressFill"></div>
+            </div>
+            <span class="audio-time" id="audioTime">00:00 / 00:00</span>
+        </div>
+
+        <div class="today-date" id="today-date">
+            <div class="date-card">
+                <div class="lunar-section">
+                    <div class="weekday-en">{weekday_en}</div>
+                    <div class="weekday-cn">{weekday_cn}</div>
+                </div>
+                <div class="gregorian-section">
+                    <div class="gregorian-date">{gregorian_date}</div>
+                    <div class="lunar-date">{lunar_info}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hitokoto" id="hitokoto">{hitokoto}</div>
+
+        <div class="news-container" id="newsContainer">
+{news_html}
+        </div>
+
+        <footer>
+            <p>
+                <img src="https://avatars.githubusercontent.com/u/63827263?v=4" alt="nodesire7" class="author-avatar">
+                <span>&copy; {year} <a href="https://github.com/nodesire7" target="_blank">nodesire7</a> | 文本由AI生成，仅供参考</span>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        (function() {{
+            var url = new URL(window.location.href);
+            if (url.searchParams.get('webp') === '1') {{
+                document.documentElement.classList.add('webp-capture');
+            }}
+
+            var audio = new Audio('60s.mp3');
+            audio.preload = 'auto';
+            var btn = document.getElementById('audioBtn');
+            var progressFill = document.getElementById('audioProgressFill');
+            var timeDisplay = document.getElementById('audioTime');
+            var progressBar = document.getElementById('audioProgressBar');
+            var isPlaying = false;
+
+            function formatTime(s) {{
+                var m = Math.floor(s / 60);
+                var sec = Math.floor(s % 60);
+                return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+            }}
+
+            btn.addEventListener('click', function() {{
+                if (isPlaying) {{ audio.pause(); }}
+                else {{ audio.play().catch(function(e) {{ console.warn('Audio play failed:', e); }}); }}
+            }});
+
+            audio.addEventListener('play', function() {{
+                isPlaying = true; btn.textContent = '⏸'; btn.classList.add('playing');
+            }});
+
+            audio.addEventListener('pause', function() {{
+                isPlaying = false; btn.textContent = '▶'; btn.classList.remove('playing');
+            }});
+
+            audio.addEventListener('ended', function() {{
+                isPlaying = false; btn.textContent = '▶'; btn.classList.remove('playing');
+                progressFill.style.width = '0%';
+                timeDisplay.textContent = '00:00 / ' + formatTime(audio.duration || 0);
+            }});
+
+            audio.addEventListener('loadedmetadata', function() {{
+                timeDisplay.textContent = '00:00 / ' + formatTime(audio.duration);
+            }});
+
+            audio.addEventListener('timeupdate', function() {{
+                if (audio.duration) {{
+                    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+                    timeDisplay.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+                }}
+            }});
+
+            progressBar.addEventListener('click', function(e) {{
+                if (!audio.duration) return;
+                var rect = progressBar.getBoundingClientRect();
+                audio.currentTime = (e.clientX - rect.left) / rect.width * audio.duration;
+            }});
+        }})();
+    </script>
+
+    <pre id="ads-txt" style="display:none">google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0</pre>
+</body>
+</html>'''
+
+    # 写入文件
+    html_path = os.path.join(BASE_DIR, "60s.html")
+    with open(html_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    logger.info(f"静态HTML已生成: {html_path} ({len(html)} bytes)")
+
+    # 同步到 index.html
+    index_path = os.path.join(BASE_DIR, "index.html")
+    with open(index_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    logger.info(f"index.html 已同步: {index_path}")
+
+    return True
+
+
 def scrape_zhihu_and_generate_rss():
     """爬取知乎并生成RSS文件（优先使用API数据）"""
     # 首先尝试从API获取数据
@@ -271,6 +875,12 @@ def scrape_zhihu_and_generate_rss():
             xml_path = os.path.join(BASE_DIR, "zhihu_daily_news.xml")
             if os.path.exists(xml_path):
                 logger.info(f"RSS文件已成功生成: {xml_path}")
+                # 同时生成静态HTML（数据直接嵌入，无需JS fetch）
+                logger.info("正在生成静态HTML页面...")
+                if generate_static_html(api_data):
+                    logger.info("静态HTML页面已成功生成")
+                else:
+                    logger.warning("静态HTML生成失败，但不影响主流程")
                 return True
             else:
                 logger.error(f"RSS文件生成失败，未找到文件: {xml_path}")

@@ -11,7 +11,7 @@
         :root {
             --background-color: #f0f0f0 !important;
             --card-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
-            --card-bg-color: #E74C3C;
+            --card-bg-color: #16A085;
         }
 
         html, body {
@@ -21,19 +21,16 @@
             min-height: auto !important;
         }
 
-        /* 取消所有动画和过渡效果（截图模式） */
         .webp-capture * {
             animation: none !important;
             transition: none !important;
         }
 
-        /* 截图模式下隐藏音频播放器和构建状态栏 */
         .webp-capture .audio-player-bar,
         .webp-capture .build-status-bar {
             display: none !important;
         }
 
-        /* 音频播放按钮 */
         .audio-player-bar {
             display: flex;
             align-items: center;
@@ -47,8 +44,7 @@
         }
 
         .audio-btn {
-            width: 44px;
-            height: 44px;
+            width: 44px; height: 44px;
             border-radius: 50%;
             border: none;
             background-color: var(--card-bg-color);
@@ -59,22 +55,12 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
             box-shadow: 0 3px 8px rgba(0,0,0,0.2);
         }
 
-        .audio-btn:hover {
-            transform: scale(1.08);
-            box-shadow: 0 5px 14px rgba(0,0,0,0.3);
-        }
-
-        .audio-btn:active {
-            transform: scale(0.95);
-        }
-
-        .audio-btn.playing {
-            animation: pulse 1.2s infinite;
-        }
+        .audio-btn:hover { transform: scale(1.08); }
+        .audio-btn:active { transform: scale(0.95); }
+        .audio-btn.playing { animation: pulse 1.2s infinite; }
 
         @keyframes pulse {
             0%, 100% { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
@@ -82,12 +68,9 @@
         }
 
         .audio-progress {
-            flex: 1;
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            overflow: hidden;
-            cursor: pointer;
+            flex: 1; height: 4px;
+            background: #e0e0e0; border-radius: 2px;
+            overflow: hidden; cursor: pointer;
         }
 
         .audio-progress-fill {
@@ -99,37 +82,30 @@
         }
 
         .audio-time {
-            font-size: 12px;
-            color: #999;
-            flex-shrink: 0;
-            min-width: 65px;
+            font-size: 12px; color: #999;
+            flex-shrink: 0; min-width: 65px;
             text-align: center;
         }
 
-        /* 标题 */
         header h1 {
             color: var(--card-bg-color) !important;
             font-size: 24px !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 !important; padding: 0 !important;
             font-weight: bold !important;
             background-color: transparent !important;
             letter-spacing: 1px !important;
         }
 
         header {
-            margin: 0 !important;
-            text-align: center !important;
+            margin: 0 !important; text-align: center !important;
             background-color: transparent !important;
             border-radius: 0 !important;
             padding: 8px 0 4px !important;
             box-shadow: none !important;
         }
 
-        /* 新闻容器 */
         .news-container {
-            padding: 15px !important;
-            margin: 0 !important;
+            padding: 15px !important; margin: 0 !important;
             background-color: #ffffff !important;
             border-radius: 12px !important;
             box-shadow: var(--card-shadow) !important;
@@ -162,8 +138,7 @@
         }
 
         .news-number {
-            width: 24px !important;
-            height: 24px !important;
+            width: 24px !important; height: 24px !important;
             border-radius: 50% !important;
             background-color: var(--card-bg-color) !important;
             color: white !important;
@@ -181,11 +156,9 @@
             line-height: 1.6 !important;
             color: #333333 !important;
             text-align: justify !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 !important; padding: 0 !important;
         }
 
-        /* 微语 */
         .hitokoto {
             background-color: #ffffff !important;
             border-radius: 12px !important;
@@ -208,8 +181,7 @@
             font-size: 40px !important;
             color: #e0e0e0 !important;
             position: absolute !important;
-            left: 12px !important;
-            top: -2px !important;
+            left: 12px !important; top: -2px !important;
         }
 
         .hitokoto::after {
@@ -217,14 +189,11 @@
             font-size: 40px !important;
             color: #e0e0e0 !important;
             position: absolute !important;
-            right: 12px !important;
-            bottom: -20px !important;
+            right: 12px !important; bottom: -20px !important;
         }
 
-        /* 日期卡片 */
         .today-date {
-            margin: 0 !important;
-            width: 100% !important;
+            margin: 0 !important; width: 100% !important;
         }
 
         .date-card {
@@ -235,8 +204,7 @@
             overflow: hidden;
             min-height: 100px;
             margin-bottom: 0 !important;
-            position: relative;
-            z-index: 1;
+            position: relative; z-index: 1;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25) !important;
             border: none !important;
         }
@@ -244,10 +212,7 @@
         .date-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-image: url('css/bg_small.webp') !important;
             background-size: cover !important;
             background-repeat: no-repeat !important;
@@ -265,38 +230,29 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            position: relative;
-            z-index: 2;
+            position: relative; z-index: 2;
             padding: 15px;
         }
 
         .lunar-section::after {
             content: '';
             position: absolute;
-            right: 0;
-            top: 30%;
-            height: 40%;
-            width: 1px;
+            right: 0; top: 30%;
+            height: 40%; width: 1px;
             background: rgba(255, 255, 255, 0.5);
             box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
         .weekday-en {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 18px; font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 5px;
-            letter-spacing: 1px;
+            margin-bottom: 5px; letter-spacing: 1px;
         }
 
-        .weekday-cn {
-            font-size: 26px;
-            font-weight: bold;
-        }
+        .weekday-cn { font-size: 26px; font-weight: bold; }
 
         .gregorian-section {
-            flex: 1;
-            padding: 15px;
+            flex: 1; padding: 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -304,18 +260,15 @@
         }
 
         .gregorian-date {
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 28px; font-weight: bold;
             margin-bottom: 5px;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
 
         .lunar-date {
-            font-size: 18px !important;
-            opacity: 1;
+            font-size: 18px !important; opacity: 1;
             color: rgba(255, 255, 255, 1);
-            letter-spacing: 1px;
-            margin-top: 2px;
+            letter-spacing: 1px; margin-top: 2px;
             font-weight: 500;
             text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         }
@@ -331,7 +284,6 @@
             background-color: #f0f0f0 !important;
         }
 
-        /* 页脚 */
         footer {
             text-align: center !important;
             padding: 8px 0 !important;
@@ -351,8 +303,7 @@
         footer p {
             display: flex !important;
             align-items: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 !important; padding: 0 !important;
         }
 
         footer a {
@@ -361,23 +312,11 @@
         }
 
         .author-avatar {
-            width: 16px !important;
-            height: 16px !important;
+            width: 16px !important; height: 16px !important;
             border-radius: 50% !important;
             margin-right: 5px !important;
         }
 
-        .fade-in {
-            opacity: 1;
-            animation: fadeIn 0.5s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* 构建状态栏 */
         .build-status-bar {
             display: flex;
             align-items: center;
@@ -394,35 +333,12 @@
         }
 
         .build-status-dot {
-            width: 8px;
-            height: 8px;
+            width: 8px; height: 8px;
             border-radius: 50%;
             background: #4CAF50;
             flex-shrink: 0;
-            animation: statusPulse 2s infinite;
         }
 
-        .build-status-dot.stale {
-            background: #FF9800;
-        }
-
-        .build-status-dot.error {
-            background: #F44336;
-        }
-
-        @keyframes statusPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* 加载状态 */
-        .loading {
-            padding: 20px 0;
-            text-align: center;
-            color: #999;
-        }
-
-        /* 响应式 */
         @media (max-width: 600px) {
             .news-content { font-size: 20px !important; }
             .gregorian-date { font-size: 22px !important; }
@@ -434,9 +350,7 @@
         }
     </style>
 
-    <!-- Google AdSense Auto Ads -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9956808351564739" crossorigin="anonymous"></script>
-    <!-- Ads.txt 声明 -->
     <meta name="adsense-ads.txt" content="google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0">
 </head>
 <body>
@@ -445,49 +359,100 @@
             <h1>每天60秒读懂世界</h1>
         </header>
 
-        <!-- 构建状态 -->
         <div class="build-status-bar" id="buildStatus">
             <span style="display:flex;align-items:center;gap:6px">
                 <span class="build-status-dot" id="statusDot"></span>
                 <span id="statusText">SYSTEM: 60S_DAILY_NEWS</span>
             </span>
-            <span id="lastSync">LAST_SYNC: --</span>
+            <span id="lastSync">LAST_SYNC: 2026-05-24 05:00</span>
         </div>
 
-        <!-- 音频播放器 -->
         <div class="audio-player-bar" id="audioPlayer">
-            <button class="audio-btn" id="audioBtn" aria-label="播放/暂停" title="播放/暂停">
-                ▶
-            </button>
+            <button class="audio-btn" id="audioBtn" aria-label="播放/暂停" title="播放/暂停">▶</button>
             <div class="audio-progress" id="audioProgressBar">
                 <div class="audio-progress-fill" id="audioProgressFill"></div>
             </div>
             <span class="audio-time" id="audioTime">00:00 / 00:00</span>
         </div>
 
-        <!-- 日期卡片 -->
         <div class="today-date" id="today-date">
-            <div class="date-card fade-in">
+            <div class="date-card">
                 <div class="lunar-section">
-                    <div class="weekday-en" id="weekdayEn">FRIDAY</div>
-                    <div class="weekday-cn" id="weekdayCn">星期五</div>
+                    <div class="weekday-en">SUNDAY</div>
+                    <div class="weekday-cn">星期日</div>
                 </div>
                 <div class="gregorian-section">
-                    <div class="gregorian-date" id="gregorianDate">2026年5月22日</div>
-                    <div class="lunar-date" id="lunarDate">丙午年(马年) 四月初六</div>
+                    <div class="gregorian-date">2026年5月24日</div>
+                    <div class="lunar-date">四月初八</div>
                 </div>
             </div>
         </div>
 
-        <!-- 微语 -->
-        <div class="hitokoto" id="hitokoto">在我们能掌控和拼搏的时间里，去提升我们生命的质量。</div>
+        <div class="hitokoto" id="hitokoto">我自己是凡人，我只求凡人的幸福。</div>
 
-        <!-- 新闻列表 -->
         <div class="news-container" id="newsContainer">
-            <div id="loading" class="loading">加载中...</div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">1</div></div>
+                <div class="news-content">1、2026年中国总票房突破150亿元，《飞驰人生3》《镖人：风起大漠》《惊蛰无声》暂列年度票房榜前三位；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">2</div></div>
+                <div class="news-content">2、山西留神峪煤矿瓦斯爆炸事故发布会：事故已致82人遇难，2人失联；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">3</div></div>
+                <div class="news-content">3、神舟二十三号瞄准北京时间5月24日23时08分发射，乘组1名航天员将开展1年期在轨驻留试验；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">4</div></div>
+                <div class="news-content">4、国产自研600公斤推力级涡扇发动机首飞成功；我国完成全球首次537天万米深海材料腐蚀试验，再破世界纪录；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">5</div></div>
+                <div class="news-content">5、商务部：1-4月全国吸收外资2876.9亿元人民币，同比下降10.3%；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">6</div></div>
+                <div class="news-content">6、数据显示：4月中国品牌在欧洲‌纯电动汽车‌市场的销量占比首超‌15%‌，创历史新高；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">7</div></div>
+                <div class="news-content">7、腾讯音乐并购喜马拉雅后，宣布放弃与相关版权方的独家授权；DeepSeek官宣永久保留V4-Pro2.5折优惠；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">8</div></div>
+                <div class="news-content">8、广州市卫健委：推进修订《广州市控制吸烟条例》，扩大禁止吸烟场所范围；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">9</div></div>
+                <div class="news-content">9、中国U17男足以2比3惜败日本获亚洲杯亚军；朝鲜“我的故乡”女足1比0战胜日本球队夺得亚冠联赛冠军；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">10</div></div>
+                <div class="news-content">10、美媒：SpaceX星舰V3首飞成功，完成模拟卫星投放并在印度洋溅落，其推力创人类历史新高；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">11</div></div>
+                <div class="news-content">11、美媒：美国宣布调整移民政策，在美外国人申请绿卡须返回原籍国提交申请，预计约60万人将受影响；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">12</div></div>
+                <div class="news-content">12、美媒：美国加州南部一大型化学品储罐泄漏，附近多个城镇约4万名居民接到疏散令；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">13</div></div>
+                <div class="news-content">13、美媒：美国5月消费者信心指数终值为44.8，创1952年有记录以来新低；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">14</div></div>
+                <div class="news-content">14、外媒：沙特、阿联酋等海湾五国不同意伊朗设立“波斯湾海峡管理局”，拒绝使用伊朗指定航道；</div>
+            </div>
+            <div class="news-item">
+                <div class="news-number-box"><div class="news-number">15</div></div>
+                <div class="news-content">15、外媒：美国务卿称美伊谈判“正在取得进展”，沙特媒体称伊朗欲以开放霍尔木兹海峡换美国赔偿；</div>
+            </div>
         </div>
 
-        <!-- 页脚 -->
         <footer>
             <p>
                 <img src="https://avatars.githubusercontent.com/u/63827263?v=4" alt="nodesire7" class="author-avatar">
@@ -497,226 +462,41 @@
     </div>
 
     <script>
-        window.isWebpCaptureMode = (function() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('webp') === '1';
-        })();
-
-        if (window.isWebpCaptureMode) {
-            document.documentElement.classList.add('webp-capture');
-        }
-
-        // ========== 按周颜色主题 ==========
         (function() {
-            function getWeekNumber(d) {
-                const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                const dayNum = date.getUTCDay() || 7;
-                date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-                const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-                return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+            var url = new URL(window.location.href);
+            if (url.searchParams.get('webp') === '1') {
+                document.documentElement.classList.add('webp-capture');
             }
 
-            window._weeklyColors = [
-                '#E74C3C', '#E67E22', '#F39C12', '#27AE60',
-                '#1ABC9C', '#2980B9', '#8E44AD', '#E91E63',
-                '#16A085', '#D35400', '#2C3E50', '#C0392B'
-            ];
-            window._getWeekNumber = getWeekNumber;
-
-            function applyWeekColor(dateObj) {
-                const weekNumber = getWeekNumber(dateObj);
-                const colorIndex = (weekNumber - 1) % 12;
-                const weekColor = window._weeklyColors[colorIndex];
-                document.documentElement.style.setProperty('--card-bg-color', weekColor);
-                window._weekNumber = weekNumber;
-                window._weekColor = weekColor;
-                window._currentYear = dateObj.getFullYear();
-            }
-
-            applyWeekColor(new Date());
-            window._applyWeekColor = applyWeekColor;
-        })();
-
-        // ========== 星期/日期本地化 ==========
-        const weekdayMap = {
-            0: { en: 'SUNDAY', zh: '星期日' },
-            1: { en: 'MONDAY', zh: '星期一' },
-            2: { en: 'TUESDAY', zh: '星期二' },
-            3: { en: 'WEDNESDAY', zh: '星期三' },
-            4: { en: 'THURSDAY', zh: '星期四' },
-            5: { en: 'FRIDAY', zh: '星期五' },
-            6: { en: 'SATURDAY', zh: '星期六' }
-        };
-
-        // ========== 从 XML 加载新闻 ==========
-        async function loadNewsFromXML() {
-            const newsContainer = document.getElementById('newsContainer');
-            const loading = document.getElementById('loading');
-
-            try {
-                const response = await fetch('./zhihu_daily_news.xml?' + Date.now());
-                const xmlText = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-                const items = xmlDoc.getElementsByTagName('item');
-
-                if (items.length === 0) throw new Error('没有找到新闻内容');
-
-                const latestItem = items[0];
-                const description = latestItem.getElementsByTagName('description')[0].textContent;
-                const lines = description.split('\n').filter(line => line.trim());
-
-                // 更新构建状态
-                const pubDateEl = latestItem.getElementsByTagName('pubDate')[0];
-                if (pubDateEl) {
-                    const pubDate = new Date(pubDateEl.textContent);
-                    const pad = n => String(n).padStart(2, '0');
-                    const syncStr = `${pubDate.getFullYear()}-${pad(pubDate.getMonth()+1)}-${pad(pubDate.getDate())} ${pad(pubDate.getHours())}:${pad(pubDate.getMinutes())}`;
-                    document.getElementById('lastSync').textContent = 'LAST_SYNC: ' + syncStr;
-
-                    // 判断新鲜度
-                    const hoursAgo = (Date.now() - pubDate.getTime()) / 3600000;
-                    const dot = document.getElementById('statusDot');
-                    if (hoursAgo > 48) {
-                        dot.classList.add('error');
-                        document.getElementById('statusText').textContent = 'SYSTEM: 60S_DAILY_NEWS [STALE]';
-                    } else if (hoursAgo > 24) {
-                        dot.classList.add('stale');
-                        document.getElementById('statusText').textContent = 'SYSTEM: 60S_DAILY_NEWS [DELAYED]';
-                    }
-                }
-
-                // 解析日期
-                const dateText = lines[0];
-                updateDateDisplay(dateText);
-
-                // 清除加载状态
-                if (loading) loading.style.display = 'none';
-                newsContainer.innerHTML = '';
-
-                // 提取微语
-                let hitokoto = '';
-                for (const line of lines) {
-                    if (line.includes('【微语】') || line.includes('【#今日微语】') || line.includes('【#今日早报微语】')) {
-                        hitokoto = line.replace(/【#今日早报微语】：|【#今日微语】：|【#今日早报微语】|【#今日微语】|【微语】[：:]?\s*/, '').trim();
-                        break;
-                    }
-                }
-                if (hitokoto) {
-                    document.getElementById('hitokoto').textContent = hitokoto;
-                }
-
-                // 收集新闻
-                const newsItems = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line || line.includes('微语') || line.includes('来源：每天60秒读懂世界')) continue;
-                    const match = line.match(/^(\d+)[、.．]/);
-                    if (match) {
-                        newsItems.push({ number: match[1], text: line.replace(/^\d+[、.．]\s*/, '') });
-                    }
-                }
-
-                const displayItems = newsItems.slice(0, 15);
-                displayItems.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'news-item';
-                    div.innerHTML = `
-                        <div class="news-number-box"><div class="news-number">${item.number}</div></div>
-                        <div class="news-content">${item.text}</div>`;
-                    newsContainer.appendChild(div);
-                });
-
-                console.log(`Loaded ${displayItems.length} news items`);
-
-            } catch (error) {
-                console.warn('XML load failed, using static content:', error.message);
-                if (loading) loading.textContent = '文本由AI生成，仅供参考';
-            }
-        }
-
-        function updateDateDisplay(dateText) {
-            const parts = dateText.split('，');
-            let year, month, date, weekday, lunarDateText;
-
-            const dateMatch = parts[0] && parts[0].match(/(\d+)年(\d+)月(\d+)日/);
-            if (dateMatch) {
-                year = parseInt(dateMatch[1]); month = parseInt(dateMatch[2]); date = parseInt(dateMatch[3]);
-            }
-
-            const now = new Date();
-            if (!year) { year = now.getFullYear(); month = now.getMonth() + 1; date = now.getDate(); }
-
-            // 根据XML解析的日期重新计算周颜色主题
-            const parsedDate = new Date(year, month - 1, date);
-            const dayIndex = parsedDate.getDay();
-            const wd = weekdayMap[dayIndex];
-            if (window._applyWeekColor) {
-                window._applyWeekColor(parsedDate);
-            }
-
-            // 更新日期显示
-            document.getElementById('weekdayEn').textContent = wd.en;
-            document.getElementById('weekdayCn').textContent = wd.zh;
-            document.getElementById('gregorianDate').textContent = `${year}年${month}月${date}日`;
-
-            // 农历
-            if (parts && parts[2]) {
-                const lunar = parts[2].replace('农历', '').trim();
-                document.getElementById('lunarDate').textContent = lunar;
-            }
-
-            // 更新 footer 年份
-            const footerSpan = document.querySelector('footer span');
-            if (footerSpan) {
-                footerSpan.innerHTML = footerSpan.innerHTML.replace(/© \d{4}/, `© ${year}`);
-            }
-
-            window._currentYear = year;
-        }
-
-        // ========== 音频播放器 ==========
-        (function() {
-            const audio = new Audio('60s.mp3');
+            var audio = new Audio('60s.mp3');
             audio.preload = 'auto';
+            var btn = document.getElementById('audioBtn');
+            var progressFill = document.getElementById('audioProgressFill');
+            var timeDisplay = document.getElementById('audioTime');
+            var progressBar = document.getElementById('audioProgressBar');
+            var isPlaying = false;
 
-            const btn = document.getElementById('audioBtn');
-            const progressBar = document.getElementById('audioProgressBar');
-            const progressFill = document.getElementById('audioProgressFill');
-            const timeDisplay = document.getElementById('audioTime');
-
-            let isPlaying = false;
-
-            function formatTime(seconds) {
-                const m = Math.floor(seconds / 60);
-                const s = Math.floor(seconds % 60);
-                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            function formatTime(s) {
+                var m = Math.floor(s / 60);
+                var sec = Math.floor(s % 60);
+                return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
             }
 
             btn.addEventListener('click', function() {
-                if (isPlaying) {
-                    audio.pause();
-                } else {
-                    audio.play().catch(e => console.warn('Audio play failed:', e));
-                }
+                if (isPlaying) { audio.pause(); }
+                else { audio.play().catch(function(e) { console.warn('Audio play failed:', e); }); }
             });
 
             audio.addEventListener('play', function() {
-                isPlaying = true;
-                btn.textContent = '⏸';
-                btn.classList.add('playing');
+                isPlaying = true; btn.textContent = '⏸'; btn.classList.add('playing');
             });
 
             audio.addEventListener('pause', function() {
-                isPlaying = false;
-                btn.textContent = '▶';
-                btn.classList.remove('playing');
+                isPlaying = false; btn.textContent = '▶'; btn.classList.remove('playing');
             });
 
             audio.addEventListener('ended', function() {
-                isPlaying = false;
-                btn.textContent = '▶';
-                btn.classList.remove('playing');
+                isPlaying = false; btn.textContent = '▶'; btn.classList.remove('playing');
                 progressFill.style.width = '0%';
                 timeDisplay.textContent = '00:00 / ' + formatTime(audio.duration || 0);
             });
@@ -727,38 +507,19 @@
 
             audio.addEventListener('timeupdate', function() {
                 if (audio.duration) {
-                    const pct = (audio.currentTime / audio.duration) * 100;
-                    progressFill.style.width = pct + '%';
+                    progressFill.style.width = (audio.currentTime / audio.duration * 100) + '%';
                     timeDisplay.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
                 }
             });
 
             progressBar.addEventListener('click', function(e) {
                 if (!audio.duration) return;
-                const rect = progressBar.getBoundingClientRect();
-                const pct = (e.clientX - rect.left) / rect.width;
-                audio.currentTime = pct * audio.duration;
+                var rect = progressBar.getBoundingClientRect();
+                audio.currentTime = (e.clientX - rect.left) / rect.width * audio.duration;
             });
         })();
-
-        // ========== 页面初始化 ==========
-        document.addEventListener('DOMContentLoaded', async function() {
-            // 加载新闻
-            await loadNewsFromXML();
-
-            // 截图模式通知
-            setTimeout(function() {
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'webp-capture-ready',
-                        height: document.body.scrollHeight
-                    }, '*');
-                }
-            }, 1000);
-        });
     </script>
 
-    <!-- Ads.txt 隐藏声明 -->
     <pre id="ads-txt" style="display:none">google.com, pub-9956808351564739, DIRECT, f08c47fec0942fa0</pre>
 </body>
 </html>
