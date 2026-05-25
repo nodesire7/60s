@@ -1,6 +1,7 @@
 name: Daily 60s Build
 
 on:
+  push:
   schedule:
     # 北京时间凌晨5点 (UTC 21:00)
     - cron: '0 21 * * *'
@@ -58,7 +59,7 @@ jobs:
             echo "No changes to commit"
           else
             TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
-            git commit -m "Daily build: $TODAY"
+            git commit -m "Daily build: $TODAY [skip ci]"
             git push
             echo "Pushed changes for $TODAY"
           fi
