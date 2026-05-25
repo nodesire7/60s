@@ -297,15 +297,33 @@ def generate_static_html(api_data):
     }
     week_color = weekday_colors[js_day]
 
-    # 获取农历信息
+    # 获取农历信息（含干支生肖年份）
     lunar_info = ""
     lunar_date = api_data.get("lunar_date", "")
     ganzhi = api_data.get("ganzhi", "")
     zodiac = api_data.get("zodiac", "")
+
+    if not ganzhi or not zodiac:
+        # 调用农历API获取完整干支生肖信息
+        try:
+            nongli_url = f"https://www.iamwawa.cn/nongli/api?type=solar&year={year}&month={month}&day={day}"
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            nongli_response = requests.get(nongli_url, headers=headers, timeout=5)
+            if nongli_response.status_code == 200:
+                nongli_data = json.loads(nongli_response.text)
+                if nongli_data.get("status") == 1 and "data" in nongli_data:
+                    nd = nongli_data["data"]
+                    ganzhi = nd.get("ganzhi", ganzhi)
+                    zodiac = nd.get("zodiac", zodiac)
+                    if not lunar_date:
+                        lunar_date = nd.get("lunar_date", "")
+        except Exception as e:
+            logger.warning(f"获取干支生肖信息失败: {e}")
+
     if ganzhi and zodiac:
         if zodiac.endswith('年'):
             zodiac = zodiac.rstrip('年')
-        lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}"
+        lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}" if lunar_date else f"{ganzhi}({zodiac}年)"
     elif lunar_date:
         lunar_info = lunar_date
 
