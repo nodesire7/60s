@@ -40,16 +40,12 @@ jobs:
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
 
-      - name: Run 60s pipeline (RSS + TTS)
+      - name: Run 60s pipeline (RSS + TTS + WebP)
         run: |
           echo "=== 执行每日构建 $(TZ='Asia/Shanghai' date) ==="
-          python sixty_seconds_daily.py --no-image
+          python sixty_seconds_daily.py
           echo "=== XML 内容预览 ==="
           head -20 zhihu_daily_news.xml
-
-      - name: Generate WebP screenshot
-        run: |
-          python generate_webp.py || echo "[WARN] WebP generation skipped (non-critical)"
 
       - name: Commit and push changes
         run: |
