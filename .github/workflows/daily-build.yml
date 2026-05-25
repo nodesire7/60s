@@ -26,10 +26,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install system dependencies (Chrome headless)
+      - name: Install system dependencies (Chrome headless + Chinese fonts)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq libegl1 libopengl0 libgbm1 libnss3 libatk-bridge2.0-0 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 2>&1 | tail -5
+          sudo apt-get install -y -qq libegl1 libopengl0 libgbm1 libnss3 libatk-bridge2.0-0 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 fonts-noto-cjk 2>&1 | tail -5
 
       - name: Install Python dependencies
         run: |
@@ -56,7 +56,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 2>/dev/null || true
+          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 60s.html index.html 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
