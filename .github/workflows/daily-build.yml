@@ -3,9 +3,13 @@ name: Daily 60s Build
 on:
   push:
   schedule:
-    # 北京时间凌晨5点 (UTC 21:00)
+    # 北京时间5点 (UTC 21:00)
     - cron: '0 21 * * *'
-    # 北京时间早上8点复查 (UTC 00:00)
+    # 北京时间6点 (UTC 22:00)
+    - cron: '0 22 * * *'
+    # 北京时间7点 (UTC 23:00)
+    - cron: '0 23 * * *'
+    # 北京时间8点 (UTC 00:00)
     - cron: '0 0 * * *'
   workflow_dispatch:
 
@@ -21,27 +25,68 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check if today's data already built
+        id: date_check
+        run: |
+          TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          echo "today_bjt=$TODAY" >> $GITHUB_OUTPUT
+          SKIP=false
+          if [ -f zhihu_daily_news.xml ]; then
+            XML_DATE=$(python3 -c "
+import xml.etree.ElementTree as ET, re, sys
+try:
+    tree = ET.parse('zhihu_daily_news.xml')
+    root = tree.getroot()
+    for elem in root.iter():
+        if elem.tag.endswith('pubDate') and elem.text:
+            m = re.search(r'(\d{1,2}) (\w{3}) (\d{4})', elem.text)
+            if m:
+                from datetime import datetime
+                d = datetime.strptime(m.group(0), '%d %b %Y')
+                print(d.strftime('%Y-%m-%d'))
+                sys.exit(0)
+except Exception as e:
+    sys.stderr.write(str(e) + '\n')
+print('none')
+" 2>/dev/null || echo "none")
+            echo "XML date: $XML_DATE"
+            if [ "$XML_DATE" = "$TODAY" ]; then
+              SKIP=true
+              echo "Today's data ($TODAY) already exists, skipping build"
+            else
+              echo "Need to build for $TODAY (current XML: $XML_DATE)"
+            fi
+          else
+            echo "No XML found, will build"
+          fi
+          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+
       - name: Setup Python
+        if: steps.date_check.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
 
       - name: Install system dependencies (Chrome headless + Chinese fonts)
+        if: steps.date_check.outputs.skip != 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq libegl1 libopengl0 libgbm1 libnss3 libatk-bridge2.0-0 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 fonts-noto-cjk 2>&1 | tail -5
 
       - name: Install Python dependencies
+        if: steps.date_check.outputs.skip != 'true'
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install edge-tts selenium webdriver-manager Pillow
 
       - name: Setup Chrome
+        if: steps.date_check.outputs.skip != 'true'
         uses: browser-actions/setup-chrome@v1
 
       - name: Run 60s pipeline (RSS + TTS + WebP)
+        if: steps.date_check.outputs.skip != 'true'
         run: |
           echo "=== 执行每日构建 $(TZ='Asia/Shanghai' date) ==="
           python sixty_seconds_daily.py
@@ -49,6 +94,7 @@ jobs:
           head -20 zhihu_daily_news.xml
 
       - name: Commit and push changes
+        if: steps.date_check.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
