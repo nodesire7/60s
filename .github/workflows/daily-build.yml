@@ -32,23 +32,8 @@ jobs:
           echo "today_bjt=$TODAY" >> $GITHUB_OUTPUT
           SKIP=false
           if [ -f zhihu_daily_news.xml ]; then
-            XML_DATE=$(python3 -c "
-import xml.etree.ElementTree as ET, re, sys
-try:
-    tree = ET.parse('zhihu_daily_news.xml')
-    root = tree.getroot()
-    for elem in root.iter():
-        if elem.tag.endswith('pubDate') and elem.text:
-            m = re.search(r'(\d{1,2}) (\w{3}) (\d{4})', elem.text)
-            if m:
-                from datetime import datetime
-                d = datetime.strptime(m.group(0), '%d %b %Y')
-                print(d.strftime('%Y-%m-%d'))
-                sys.exit(0)
-except Exception as e:
-    sys.stderr.write(str(e) + '\n')
-print('none')
-" 2>/dev/null || echo "none")
+            DATE_STR=$(grep -m1 'pubDate' zhihu_daily_news.xml | grep -oP '\d{1,2} \w{3} \d{4}' || true)
+            XML_DATE=$(date -d "$DATE_STR" +'%Y-%m-%d' 2>/dev/null || echo "none")
             echo "XML date: $XML_DATE"
             if [ "$XML_DATE" = "$TODAY" ]; then
               SKIP=true
