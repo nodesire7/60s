@@ -926,9 +926,9 @@ def load_content_from_xml(xml_path):
 def scrape_zhihu_and_generate_rss():
     """抓取今日新闻并生成 RSS/HTML。
 
-    返回 "ok"   今日数据已生成
-         "stale" 上游尚未发布今日数据（不是错误，等下一次调度）
-         "error" 硬失败（数据源不可用/生成失败）
+    返回 "ok"      今日数据已获取并生成成功
+         "no_data" 还没有拿到今天的数据（正常，等下一轮轮询）
+         "error"   已经拿到数据但生成失败（需要人工介入）
     """
     api_data, state = fetch_data_from_api()
 
@@ -941,22 +941,22 @@ def scrape_zhihu_and_generate_rss():
         write_data_date(api_data['date'])
         return 'ok'
 
-    logger.info("API 数据不可用，尝试从知乎爬取数据...")
+    logger.info(f"API 数据不可用（{state}），尝试从知乎爬取数据...")
     success, output = run_command(f"python {SCRAPER_PATH} -r", cwd=BASE_DIR)
     if not success:
-        logger.error("爬取知乎失败")
-        return state
+        logger.warning("爬取知乎失败，仍没有今天的数据")
+        return 'no_data'
 
     xml_path = os.path.join(BASE_DIR, "zhihu_daily_news.xml")
     if not os.path.exists(xml_path):
-        logger.error(f"未找到生成的XML文件: {xml_path}")
-        return 'error'
+        logger.warning(f"未找到生成的XML文件: {xml_path}")
+        return 'no_data'
 
     # 关键校验：绝不能把仓库里的旧 XML 当成今天的结果继续生成
     xml_date = read_xml_data_date(xml_path)
     if xml_date != today_cst():
-        logger.error(f"爬虫结果日期为 {xml_date}，不是今天 {today_cst()}，拒绝复用旧数据")
-        return 'stale' if xml_date else 'error'
+        logger.warning(f"爬虫结果日期为 {xml_date}，不是今天 {today_cst()}，拒绝复用旧数据")
+        return 'no_data'
 
     xml_data = load_content_from_xml(xml_path)
     if not xml_data:
@@ -1056,11 +1056,11 @@ def main():
     # 1. 抓取今日新闻并生成 RSS/HTML
     if not args.no_scrape:
         status = scrape_zhihu_and_generate_rss()
-        if status == 'stale':
-            logger.warning("上游尚未发布今日数据，本次不更新，等待下一次调度")
+        if status == 'no_data':
+            logger.warning("还没有拿到今天的数据，本次不更新，等待下一轮轮询")
             return 3
         if status != 'ok':
-            logger.error("获取今日新闻失败")
+            logger.error("已拿到数据但生成失败，需要人工检查")
             return 1
 
         # 兜底校验：产物日期必须是今天，否则绝不提交

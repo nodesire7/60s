@@ -1,0 +1,36 @@
+name: Daily 60s Watchdog
+
+# 轮询本身不报警（避免每 20 分钟一个红叉），这里每天只做一次"最终验收"：
+# 当天数据如果一整天都没生成，就让这次任务失败，触发 GitHub 的失败通知。
+on:
+  schedule:
+    # 北京时间 21:00
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-today:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check today's data
+        run: |
+          TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          BUILT=$(cat data-date.txt 2>/dev/null | tr -d '\r\n ' || true)
+          echo "数据日期: ${BUILT:-none} / 今天: $TODAY"
+
+          if [ "$BUILT" != "$TODAY" ]; then
+            echo "::error::今天（$TODAY）的数据一整天都没有生成，请检查数据源 https://60s.viki.moe/v2/60s"
+            exit 1
+          fi
+
+          echo "今日数据已正常生成，最近一次构建提交见 git log"
