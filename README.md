@@ -91,6 +91,15 @@ GitHub Actions 会在北京时间 **06:40–12:40 每 20 分钟**检查一次：
 
 > 数据日期记录在 `data-date.txt`，CI 与本地都以它为准，不再靠 `pubDate` 猜测。
 
+### CDN 缓存（重要）
+
+站点 `60s.gbtgame.me` 走 Cloudflare 代理，HTML 会被缓存 30 分钟（源站 `Cache-Control: max-age=1800`），
+所以即使构建完成，首页也可能最多晚 30 分钟才变。建议二选一：
+
+1. 在 Cloudflare 给该域名加一条 Cache Rule：对 HTML 设 **Bypass cache**（或 Edge TTL 2 分钟），更新即时生效；
+2. 或在仓库 Secrets 里配置 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ZONE_ID`，
+   工作流会在推送后自动 purge 首页缓存（未配置时该步骤自动跳过）。
+
 ## 许可
 
 文本由AI生成，仅供参考。代码开源。
