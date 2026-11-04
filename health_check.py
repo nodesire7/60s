@@ -102,20 +102,35 @@ def main():
             errors.append(f"XML parse error: {e}")
 
     # 4. 检查API连通性
-    print("\n[4] API Connectivity")
-    try:
-        import requests
-        r = requests.get('https://zaobao.wpush.cn/api/zaobao/today', timeout=10)
-        if r.status_code == 200:
-            data = r.json()
-            if data.get('status') == 'success':
-                print(f"  [OK] API OK — {len(data.get('data', {}).get('news', []))} news items")
-            else:
-                print(f"  [WARN] API returned unexpected: {data}")
-        else:
-            print(f"  [WARN] API HTTP {r.status_code}")
-    except Exception as e:
-        print(f"  [WARN] API unreachable: {e}")
+    print("\n[4] API Connectivity (vikiboss/60s)")
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
+    api_sources = [
+        ('主', 'https://60s.viki.moe/v2/60s'),
+        ('备', 'https://60s-api.viki.moe/v2/60s'),
+        ('备', 'https://60s.afei7.com/v2/60s'),
+    ]
+    api_ok = False
+    for label, api_url in api_sources:
+        try:
+            import requests
+            r = requests.get(api_url, timeout=15,
+                             headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
+            if r.status_code != 200:
+                print(f"  [WARN] {label} {api_url} HTTP {r.status_code}")
+                continue
+            data = (r.json() or {}).get('data') or {}
+            date_str = str(data.get('date') or '')
+            news = data.get('news') or []
+            if date_str == today:
+                print(f"  [OK] {label} {api_url} — {len(news)} 条新闻，日期 {date_str}")
+                api_ok = True
+                break
+            print(f"  [WARN] {label} {api_url} 日期 {date_str or 'none'}，不是今天 {today}")
+        except Exception as e:
+            print(f"  [WARN] {label} {api_url} unreachable: {e}")
+    if not api_ok:
+        errors.append(f"没有拿到 {today} 的新闻数据")
 
     # 5. 检查edge-tts
     print("\n[5] TTS (edge-tts)")
@@ -137,6 +152,17 @@ def main():
 
     # 7. 检查CSV输出文件时效性
     print("\n[7] Output Freshness")
+    marker = os.path.join(BASE_DIR, 'data-date.txt')
+    if os.path.exists(marker):
+        with open(marker, encoding='utf-8') as f:
+            built = f.read().strip()
+        ok = built == today
+        print(f"  [{'OK' if ok else 'FAIL'}] data-date.txt = {built}（今天 {today}）")
+        if not ok:
+            errors.append(f"数据日期不是今天: {built}")
+    else:
+        print("  [FAIL] 缺少 data-date.txt")
+        errors.append("缺少 data-date.txt")
     mp3_path = os.path.join(BASE_DIR, '60s.mp3')
     webp_path = os.path.join(BASE_DIR, '60s.webp')
     for label, path in [('MP3', mp3_path), ('WebP', webp_path)]:

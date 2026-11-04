@@ -51,6 +51,18 @@ SCRAPER_PATH = os.path.join(BASE_DIR, "scraper.py")  # 爬虫脚本路径
 RSS_TO_TTS_PATH = os.path.join(BASE_DIR, "rss_to_tts.py")  # RSS转TTS脚本路径
 OUTPUT_DIR = BASE_DIR  # 输出目录与BASE_DIR相同
 HTML_PATH = os.path.join(BASE_DIR, "60s.html")  # HTML文件路径
+DATA_DATE_FILE = os.path.join(BASE_DIR, "data-date.txt")  # 记录已生成数据的日期，供 CI 判断
+
+CN_TZ = pytz.timezone('Asia/Shanghai')
+
+# 新闻数据源：优先使用 vikiboss/60s 官方 API，失败时依次回退
+# 上游项目: https://github.com/vikiboss/60s
+API_SOURCES = [
+    ("60s 官方 API", "https://60s.viki.moe/v2/60s"),
+    ("60s 备用 API", "https://60s-api.viki.moe/v2/60s"),
+    ("60s 镜像", "https://60s.afei7.com/v2/60s"),
+]
+SOURCE_HOME = "https://github.com/vikiboss/60s"
 
 def check_local_server(host='localhost', port=1929):
     """检查本地服务器是否运行"""
@@ -93,169 +105,189 @@ def run_command(cmd, cwd=None, shell=True):
         logger.error(f"执行命令时出错: {e}")
         return False, str(e)
 
+def today_cst():
+    """返回北京时间今天的日期字符串"""
+    return datetime.now(CN_TZ).strftime('%Y-%m-%d')
+
+
+def split_lunar(value):
+    """把 '丙午年九月廿六' 拆成 ('丙午年', '九月廿六')"""
+    m = re.match(r'^([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])年(.*)$', (value or '').strip())
+    if m:
+        return f"{m.group(1)}年", m.group(2).strip()
+    return '', (value or '').strip()
+
+
+ZODIAC_BY_BRANCH = {
+    '子': '鼠', '丑': '牛', '寅': '虎', '卯': '兔', '辰': '龙', '巳': '蛇',
+    '午': '马', '未': '羊', '申': '猴', '酉': '鸡', '戌': '狗', '亥': '猪',
+}
+
+
+def normalize_api_data(raw):
+    """把不同数据源返回的数据统一成内部结构；数据不完整时返回 None"""
+    if not isinstance(raw, dict):
+        return None
+
+    date_str = str(raw.get('date') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        return None
+
+    news = []
+    for item in raw.get('news') or []:
+        text = re.sub(r'^\s*\d+[、.．]\s*', '', str(item)).strip()
+        if text:
+            news.append(text)
+    if not news:
+        return None
+
+    data = dict(raw)
+    data['date'] = date_str
+    data['news'] = news
+    # 老接口用 weiyu，vikiboss/60s 接口用 tip
+    data['weiyu'] = str(raw.get('weiyu') or raw.get('tip') or '').strip()
+
+    ganzhi, lunar_md = split_lunar(str(raw.get('lunar_date') or ''))
+    if not ganzhi:
+        ganzhi = str(raw.get('ganzhi') or '').strip()
+    zodiac = str(raw.get('zodiac') or '').strip().rstrip('年')
+    if not zodiac and len(ganzhi) >= 2:
+        zodiac = ZODIAC_BY_BRANCH.get(ganzhi[1], '')
+    data['ganzhi'] = ganzhi
+    data['zodiac'] = zodiac
+    data['lunar_date'] = lunar_md if ganzhi else str(raw.get('lunar_date') or '')
+
+    if not data.get('day_of_week'):
+        d = datetime.strptime(date_str, '%Y-%m-%d')
+        data['day_of_week'] = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][d.weekday()]
+    return data
+
+
 def fetch_data_from_api():
-    """从API获取数据"""
-    api_url = "https://zaobao.wpush.cn/api/zaobao/today"
-    logger.info(f"尝试从API获取数据: {api_url}")
-    
+    """从上游 API 获取今日数据。
+
+    返回 (data, state)：
+      state = "ok"     拿到了今天的数据
+      state = "stale"  接口可用，但数据还停留在旧日期（上游尚未发布）
+      state = "error"  所有接口都不可用
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+    }
+    today = today_cst()
+    saw_stale = False
+
+    for name, api_url in API_SOURCES:
+        logger.info(f"尝试从 {name} 获取数据: {api_url}")
+        try:
+            response = requests.get(api_url, headers=headers, timeout=15)
+            response.raise_for_status()
+            payload = response.json()
+        except Exception as e:
+            logger.warning(f"{name} 请求失败: {e}")
+            continue
+
+        if not isinstance(payload, dict) or payload.get('code') != 200:
+            logger.warning(f"{name} 返回状态异常: {str(payload)[:200]}")
+            continue
+
+        data = normalize_api_data(payload.get('data') or {})
+        if not data:
+            logger.warning(f"{name} 返回的数据不完整，忽略")
+            continue
+
+        if data['date'] != today:
+            logger.warning(f"{name} 数据仍停留在 {data['date']}（今天 {today}），上游尚未发布")
+            saw_stale = True
+            continue
+
+        logger.info(f"{name} 获取成功: {data['date']}，{len(data['news'])} 条新闻")
+        return data, 'ok'
+
+    return None, ('stale' if saw_stale else 'error')
+
+
+def resolve_lunar_info(api_data, year, month, day):
+    """返回 (ganzhi, zodiac, 农历月日)，API 缺失时回退到农历接口"""
+    ganzhi = str(api_data.get('ganzhi') or '').strip()
+    zodiac = str(api_data.get('zodiac') or '').strip().rstrip('年')
+    lunar_md = str(api_data.get('lunar_date') or '').strip()
+
+    if ganzhi and zodiac and lunar_md:
+        return ganzhi, zodiac, lunar_md
+
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(api_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        if data.get("status") == "success" and data.get("code") == 200 and "data" in data:
-            logger.info("成功从API获取数据")
-            return data["data"]
-        else:
-            logger.warning(f"API返回数据格式异常: {data}")
-            return None
-            
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"从API获取数据失败: {e}")
-        return None
-    except json.JSONDecodeError as e:
-        logger.warning(f"API返回数据JSON解析失败: {e}")
-        return None
+        nongli_url = f"https://www.iamwawa.cn/nongli/api?type=solar&year={year}&month={month}&day={day}"
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        nongli_response = requests.get(nongli_url, headers=headers, timeout=8)
+        if nongli_response.status_code == 200:
+            nongli_data = nongli_response.json()
+            if nongli_data.get('status') == 1 and 'data' in nongli_data:
+                nd = nongli_data['data']
+                ganzhi = ganzhi or str(nd.get('ganzhi') or '').strip()
+                zodiac = zodiac or str(nd.get('zodiac') or '').strip().rstrip('年')
+                lunar_md = lunar_md or str(nd.get('lunar_date') or '').strip()
     except Exception as e:
-        logger.warning(f"从API获取数据时发生未知错误: {e}")
-        return None
+        logger.warning(f"获取农历信息失败: {e}")
+
+    return ganzhi, zodiac, lunar_md
+
+
+def build_lunar_text(ganzhi, zodiac, lunar_md):
+    """组合成 '丙午年(马年) 九月廿六' 的展示文本"""
+    if ganzhi and zodiac:
+        text = f"{ganzhi}({zodiac}年)"
+        return f"{text} {lunar_md}".strip() if lunar_md else text
+    return lunar_md
+
+
+def build_content(api_data, year, month, day, weekday, lunar_text):
+    """生成 RSS 与页面共用的正文：日期行 + 编号新闻 + 微语"""
+    date_line = f"{year}年{month}月{day}日，{weekday}"
+    if lunar_text:
+        date_line += f"，{lunar_text}"
+    lines = [date_line, ""]
+
+    for idx, item in enumerate(api_data.get('news') or [], 1):
+        lines.append(f"{idx}、{item}")
+
+    weiyu = str(api_data.get('weiyu') or '').strip()
+    if weiyu:
+        lines.append("")
+        lines.append(f"【微语】{weiyu}")
+    return "\n".join(lines)
+
 
 def generate_rss_from_api_data(api_data):
     """从API数据生成RSS文件"""
     try:
+        date_obj = datetime.strptime(api_data.get('date', ''), '%Y-%m-%d')
+        year, month, day = date_obj.year, date_obj.month, date_obj.day
+        weekday = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][date_obj.weekday()]
+
+        ganzhi, zodiac, lunar_md = resolve_lunar_info(api_data, year, month, day)
+        lunar_text = build_lunar_text(ganzhi, zodiac, lunar_md)
+        content = build_content(api_data, year, month, day, weekday, lunar_text)
+
         fg = FeedGenerator()
         fg.title('60秒知天下')
-        fg.link(href='https://zaobao.wpush.cn', rel='alternate')
+        fg.link(href=SOURCE_HOME, rel='alternate')
         fg.description('60秒知天下RSS')
         fg.language('zh-CN')
-        
-        # 解析日期
-        date_str = api_data.get("date", "")
-        if date_str:
-            try:
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-                year, month, day = date_obj.year, date_obj.month, date_obj.day
-            except:
-                now = datetime.now()
-                year, month, day = now.year, now.month, now.day
-        else:
-            now = datetime.now()
-            year, month, day = now.year, now.month, now.day
-        
-        # 获取星期
-        date_obj = datetime(year, month, day)
-        weekday = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][date_obj.weekday()]
-        
-        # 获取农历信息
-        lunar_date = api_data.get("lunar_date", "")
-        if not lunar_date:
-            # 如果API没有提供农历信息，尝试从农历API获取
-            try:
-                nongli_url = f"https://www.iamwawa.cn/nongli/api?type=solar&year={year}&month={month}&day={day}"
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-                nongli_response = requests.get(nongli_url, headers=headers, timeout=5)
-                if nongli_response.status_code == 200:
-                    nongli_data = json.loads(nongli_response.text)
-                    if nongli_data.get("status") == 1 and "data" in nongli_data:
-                        data = nongli_data["data"]
-                        lunar_date = data.get("lunar_date", "")
-                        ganzhi = data.get("ganzhi", "")
-                        zodiac = data.get("zodiac", "")
-                        if zodiac and zodiac.endswith('年'):
-                            zodiac = zodiac.rstrip('年')
-                        if ganzhi and zodiac:
-                            lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}"
-                        else:
-                            lunar_info = lunar_date if lunar_date else ""
-                    else:
-                        lunar_info = ""
-                else:
-                    lunar_info = ""
-            except Exception as e:
-                logger.warning(f"获取农历信息失败: {e}")
-                lunar_info = ""
-        else:
-            # API提供了农历日期，尝试获取干支和生肖信息
-            try:
-                nongli_url = f"https://www.iamwawa.cn/nongli/api?type=solar&year={year}&month={month}&day={day}"
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-                nongli_response = requests.get(nongli_url, headers=headers, timeout=5)
-                if nongli_response.status_code == 200:
-                    nongli_data = json.loads(nongli_response.text)
-                    if nongli_data.get("status") == 1 and "data" in nongli_data:
-                        data = nongli_data["data"]
-                        ganzhi = data.get("ganzhi", "")
-                        zodiac = data.get("zodiac", "")
-                        if zodiac and zodiac.endswith('年'):
-                            zodiac = zodiac.rstrip('年')
-                        if ganzhi and zodiac:
-                            lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}"
-                        else:
-                            lunar_info = lunar_date
-                    else:
-                        lunar_info = lunar_date
-                else:
-                    lunar_info = lunar_date
-            except Exception as e:
-                logger.warning(f"获取干支信息失败，使用API提供的农历日期: {e}")
-                lunar_info = lunar_date
-        
-        # 构建标题
-        title = api_data.get("title", f"{year}年{month}月{day}日，{weekday}，在这里每天读懂世界")
-        
-        # 构建内容
-        news_list = api_data.get("news", [])
-        weiyu = api_data.get("weiyu", "")
-        
-        content_lines = []
-        # 添加日期行
-        if lunar_info:
-            # 如果lunar_info已经包含干支信息（格式：干支(生肖年) 农历日期），则直接使用
-            if "(" in lunar_info and "年)" in lunar_info:
-                date_line = f"{year}年{month}月{day}日，{weekday}，{lunar_info}"
-            else:
-                date_line = f"{year}年{month}月{day}日，{weekday}，农历{lunar_info}"
-        else:
-            date_line = f"{year}年{month}月{day}日，{weekday}"
-        content_lines.append(date_line)
-        content_lines.append("")
-        
-        # 添加新闻条目
-        for news_item in news_list:
-            content_lines.append(news_item)
-        
-        # 添加微语
-        if weiyu:
-            content_lines.append("")
-            content_lines.append(weiyu)
-        
-        content = "\n".join(content_lines)
-        
-        # 创建RSS条目
+
         fe = fg.add_entry()
-        fe.title(title)
-        fe.link(href="https://zaobao.wpush.cn")
+        fe.title(f"{month}月{day}日，{weekday}，在这里每天读懂世界")
+        fe.link(href=SOURCE_HOME)
         fe.description(content)
-        
-        # 设置发布日期
-        pub_date = datetime(year, month, day, tzinfo=pytz.timezone('Asia/Shanghai'))
-        fe.pubDate(pub_date)
-        
-        # 保存RSS文件
+        fe.pubDate(CN_TZ.localize(datetime(year, month, day)))
+
         xml_path = os.path.join(BASE_DIR, "zhihu_daily_news.xml")
         fg.rss_file(xml_path, pretty=True)
         logger.info(f"RSS文件已成功生成: {xml_path}")
-        
         return True
-        
+
     except Exception as e:
         logger.error(f"从API数据生成RSS文件时出错: {e}")
         return False
@@ -298,34 +330,8 @@ def generate_static_html(api_data):
     week_color = weekday_colors[js_day]
 
     # 获取农历信息（含干支生肖年份）
-    lunar_info = ""
-    lunar_date = api_data.get("lunar_date", "")
-    ganzhi = api_data.get("ganzhi", "")
-    zodiac = api_data.get("zodiac", "")
-
-    if not ganzhi or not zodiac:
-        # 调用农历API获取完整干支生肖信息
-        try:
-            nongli_url = f"https://www.iamwawa.cn/nongli/api?type=solar&year={year}&month={month}&day={day}"
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-            nongli_response = requests.get(nongli_url, headers=headers, timeout=5)
-            if nongli_response.status_code == 200:
-                nongli_data = json.loads(nongli_response.text)
-                if nongli_data.get("status") == 1 and "data" in nongli_data:
-                    nd = nongli_data["data"]
-                    ganzhi = nd.get("ganzhi", ganzhi)
-                    zodiac = nd.get("zodiac", zodiac)
-                    if not lunar_date:
-                        lunar_date = nd.get("lunar_date", "")
-        except Exception as e:
-            logger.warning(f"获取干支生肖信息失败: {e}")
-
-    if ganzhi and zodiac:
-        if zodiac.endswith('年'):
-            zodiac = zodiac.rstrip('年')
-        lunar_info = f"{ganzhi}({zodiac}年) {lunar_date}" if lunar_date else f"{ganzhi}({zodiac}年)"
-    elif lunar_date:
-        lunar_info = lunar_date
+    ganzhi, zodiac, lunar_md = resolve_lunar_info(api_data, year, month, day)
+    lunar_info = build_lunar_text(ganzhi, zodiac, lunar_md)
 
     # 生成标题
     title = api_data.get("title", f"{year}年{month}月{day}日，{weekday_cn}，在这里每天读懂世界")
@@ -334,17 +340,7 @@ def generate_static_html(api_data):
     # 构建内容文本（用于解析新闻条目和微语）
     content = api_data.get("content", "")
     if not content:
-        news_list = api_data.get("news", [])
-        if news_list:
-            # API返回的news条目已自带序号（如"1、xxxx"），直接使用
-            content_lines = [title, ""]
-            for news_item in news_list:
-                content_lines.append(news_item)
-            content_lines.append("")
-            weiyu = api_data.get("weiyu", "")
-            if weiyu:
-                content_lines.append(f"【微语】{weiyu}")
-            content = "\n".join(content_lines)
+        content = build_content(api_data, year, month, day, weekday_cn, lunar_info)
 
     # 解析新闻条目
     lines = content.split('\n')
@@ -385,7 +381,8 @@ def generate_static_html(api_data):
     from datetime import timezone as _tz, timedelta as _td
     _cst = _tz(_td(hours=8))
     build_time = datetime.now(_cst).strftime('%Y-%m-%d %H:%M')
-    sync_time = f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)} 05:00"
+    # 显示真实构建时间（旧代码写死 05:00，与实际更新时间不符）
+    sync_time = build_time
 
     html = f'''<!DOCTYPE html>
 <html lang="zh-CN" style="background-color: #f0f0f0 !important;">
@@ -869,47 +866,109 @@ def generate_static_html(api_data):
     return True
 
 
+def write_data_date(date_str):
+    """写入数据日期标记文件，CI 用它判断今天是否已经生成"""
+    try:
+        with open(DATA_DATE_FILE, 'w', encoding='utf-8') as f:
+            f.write(f"{date_str}\n")
+        return True
+    except Exception as e:
+        logger.warning(f"写入数据日期标记失败: {e}")
+        return False
+
+
+def read_xml_data_date(xml_path):
+    """从 RSS 中解析新闻日期，解析不出来返回 None"""
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.parse(xml_path).getroot()
+        item = root.find('.//item')
+        if item is None:
+            return None
+
+        for text in (item.findtext('description') or '', item.findtext('title') or ''):
+            m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', text)
+            if m:
+                return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3))).strftime('%Y-%m-%d')
+
+        m = re.search(r'(\d{1,2})月(\d{1,2})日', item.findtext('title') or '')
+        if m:
+            return datetime(datetime.now(CN_TZ).year, int(m.group(1)), int(m.group(2))).strftime('%Y-%m-%d')
+
+        m = re.search(r'(\d{1,2}) (\w{3}) (\d{4})', item.findtext('pubDate') or '')
+        if m:
+            return datetime.strptime(f"{m.group(1)} {m.group(2)} {m.group(3)}", '%d %b %Y').strftime('%Y-%m-%d')
+    except Exception as e:
+        logger.warning(f"解析 RSS 日期失败: {e}")
+    return None
+
+
+def load_content_from_xml(xml_path):
+    """把爬虫生成的 RSS 读回成 api_data 结构，用于生成静态页面"""
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.parse(xml_path).getroot()
+        item = root.find('.//item')
+        if item is None:
+            return None
+        return {
+            'date': read_xml_data_date(xml_path) or today_cst(),
+            'title': item.findtext('title') or '',
+            'content': item.findtext('description') or '',
+            'news': [],
+            'weiyu': '',
+        }
+    except Exception as e:
+        logger.warning(f"读取 RSS 内容失败: {e}")
+        return None
+
+
 def scrape_zhihu_and_generate_rss():
-    """爬取知乎并生成RSS文件（优先使用API数据）"""
-    # 首先尝试从API获取数据
-    api_data = fetch_data_from_api()
-    
+    """抓取今日新闻并生成 RSS/HTML。
+
+    返回 "ok"   今日数据已生成
+         "stale" 上游尚未发布今日数据（不是错误，等下一次调度）
+         "error" 硬失败（数据源不可用/生成失败）
+    """
+    api_data, state = fetch_data_from_api()
+
     if api_data:
-        logger.info("成功从API获取数据，正在生成RSS文件...")
-        if generate_rss_from_api_data(api_data):
-            xml_path = os.path.join(BASE_DIR, "zhihu_daily_news.xml")
-            if os.path.exists(xml_path):
-                logger.info(f"RSS文件已成功生成: {xml_path}")
-                # 同时生成静态HTML（数据直接嵌入，无需JS fetch）
-                logger.info("正在生成静态HTML页面...")
-                if generate_static_html(api_data):
-                    logger.info("静态HTML页面已成功生成")
-                else:
-                    logger.warning("静态HTML生成失败，但不影响主流程")
-                return True
-            else:
-                logger.error(f"RSS文件生成失败，未找到文件: {xml_path}")
-                return False
-        else:
-            logger.error("从API数据生成RSS文件失败")
-            return False
-    
-    # 如果API获取失败，则使用原来的知乎爬取方式
-    logger.info("API获取数据失败，尝试从知乎爬取数据...")
+        if not generate_rss_from_api_data(api_data):
+            return 'error'
+        if not generate_static_html(api_data):
+            logger.error("静态HTML生成失败")
+            return 'error'
+        write_data_date(api_data['date'])
+        return 'ok'
+
+    logger.info("API 数据不可用，尝试从知乎爬取数据...")
     success, output = run_command(f"python {SCRAPER_PATH} -r", cwd=BASE_DIR)
     if not success:
         logger.error("爬取知乎失败")
-        return False
-    
-    # 检查XML文件是否已生成 - 直接在BASE_DIR中检查，因为scraper.py会直接在其运行目录生成XML
+        return state
+
     xml_path = os.path.join(BASE_DIR, "zhihu_daily_news.xml")
     if not os.path.exists(xml_path):
         logger.error(f"未找到生成的XML文件: {xml_path}")
-        return False
-    
-    # 由于OUTPUT_DIR与BASE_DIR相同，文件已经在正确位置，不需要复制
-    logger.info(f"RSS文件已成功生成: {xml_path}")
-    return True
+        return 'error'
+
+    # 关键校验：绝不能把仓库里的旧 XML 当成今天的结果继续生成
+    xml_date = read_xml_data_date(xml_path)
+    if xml_date != today_cst():
+        logger.error(f"爬虫结果日期为 {xml_date}，不是今天 {today_cst()}，拒绝复用旧数据")
+        return 'stale' if xml_date else 'error'
+
+    xml_data = load_content_from_xml(xml_path)
+    if not xml_data:
+        logger.error("无法读取爬虫生成的 RSS 内容")
+        return 'error'
+    if not generate_static_html(xml_data):
+        logger.error("静态HTML生成失败")
+        return 'error'
+
+    write_data_date(xml_date)
+    return 'ok'
+
 
 def generate_tts():
     """生成TTS语音文件"""
@@ -994,13 +1053,24 @@ def main():
         logger.info("请确保scraper.py文件位于正确位置")
         return 1
     
-    # 1. 爬取知乎并生成RSS
+    # 1. 抓取今日新闻并生成 RSS/HTML
     if not args.no_scrape:
-        if not scrape_zhihu_and_generate_rss():
-            logger.error("爬取知乎并生成RSS的步骤失败")
+        status = scrape_zhihu_and_generate_rss()
+        if status == 'stale':
+            logger.warning("上游尚未发布今日数据，本次不更新，等待下一次调度")
+            return 3
+        if status != 'ok':
+            logger.error("获取今日新闻失败")
             return 1
+
+        # 兜底校验：产物日期必须是今天，否则绝不提交
+        xml_date = read_xml_data_date(os.path.join(BASE_DIR, "zhihu_daily_news.xml"))
+        if xml_date != today_cst():
+            logger.error(f"构建结果日期为 {xml_date}，不是今天 {today_cst()}，中止")
+            return 1
+        logger.info(f"数据日期校验通过: {xml_date}")
     else:
-        logger.info("已跳过爬取知乎并生成RSS的步骤")
+        logger.info("已跳过抓取新闻并生成RSS/HTML的步骤")
     
     # 2. 生成TTS语音文件
     if not args.no_tts:

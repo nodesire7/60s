@@ -2,19 +2,20 @@ name: Daily 60s Build
 
 on:
   push:
+    branches: [main]
   schedule:
-    # 北京时间5点 (UTC 21:00)
-    - cron: '0 21 * * *'
-    # 北京时间6点 (UTC 22:00)
-    - cron: '0 22 * * *'
-    # 北京时间7点 (UTC 23:00)
-    - cron: '0 23 * * *'
-    # 北京时间8点 (UTC 00:00)
-    - cron: '0 0 * * *'
+    # 北京时间 07:00–12:40，每 20 分钟检查一次。
+    # 上游（vikiboss/60s）一般在早上发布，未发布时本次直接跳过，发布后 20 分钟内完成更新。
+    - cron: '*/20 23-4 * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# 同一时间只跑一个构建，避免定时任务与手动触发互相覆盖
+concurrency:
+  group: daily-60s-build
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -24,27 +25,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Check if today's data already built
+      - name: Check today's data status
         id: date_check
         run: |
           TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
-          echo "today_bjt=$TODAY" >> $GITHUB_OUTPUT
-          SKIP=false
-          if [ -f zhihu_daily_news.xml ]; then
-            DATE_STR=$(grep -m1 'pubDate' zhihu_daily_news.xml | grep -oP '\d{1,2} \w{3} \d{4}' || true)
-            XML_DATE=$(TZ='Asia/Shanghai' date -d "$DATE_STR" +'%Y-%m-%d' 2>/dev/null || echo "none")
-            echo "XML date: $XML_DATE"
-            if [ "$XML_DATE" = "$TODAY" ]; then
-              SKIP=true
-              echo "Today's data ($TODAY) already exists, skipping build"
-            else
-              echo "Need to build for $TODAY (current XML: $XML_DATE)"
-            fi
+          BUILT=$(cat data-date.txt 2>/dev/null | tr -d '\r\n ' || true)
+          echo "today_bjt=$TODAY" >> "$GITHUB_OUTPUT"
+          if [ "$BUILT" = "$TODAY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "今日（$TODAY）数据已生成，跳过构建"
           else
-            echo "No XML found, will build"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "当前数据日期: ${BUILT:-none}，需要构建 $TODAY"
           fi
-          echo "skip=$SKIP" >> $GITHUB_OUTPUT
 
       - name: Setup Python
         if: steps.date_check.outputs.skip != 'true'
@@ -71,26 +67,67 @@ jobs:
         uses: browser-actions/setup-chrome@v1
 
       - name: Run 60s pipeline (RSS + TTS + WebP)
+        id: build
         if: steps.date_check.outputs.skip != 'true'
         run: |
-          echo "=== 执行每日构建 $(TZ='Asia/Shanghai' date) ==="
+          echo "=== 执行每日构建 $(TZ='Asia/Shanghai' date '+%F %T %Z') ==="
+          set +e
           python sixty_seconds_daily.py
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+
+          if [ "$code" -eq 3 ]; then
+            # 上游还没发布今天的新闻，不算失败
+            HOUR=$(TZ='Asia/Shanghai' date +%H)
+            if [ "$HOUR" -ge 11 ]; then
+              echo "::error::已过北京时间 11:00，上游仍未发布今日数据，请检查数据源"
+              exit 1
+            fi
+            echo "::notice::上游尚未发布今日数据，等待下一次调度"
+            exit 0
+          fi
+
+          if [ "$code" -ne 0 ]; then
+            echo "::error::构建脚本失败，退出码 $code"
+            exit "$code"
+          fi
+
           echo "=== XML 内容预览 ==="
-          head -20 zhihu_daily_news.xml
+          head -12 zhihu_daily_news.xml
+
+      - name: Verify today's data
+        if: steps.date_check.outputs.skip != 'true' && steps.build.outputs.exit_code == '0'
+        run: |
+          TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')
+          BUILT=$(cat data-date.txt 2>/dev/null || echo none)
+          echo "数据日期: $BUILT / 今天: $TODAY"
+          if [ "$BUILT" != "$TODAY" ]; then
+            echo "::error::构建结果不是今日数据（$BUILT），拒绝提交"
+            exit 1
+          fi
+          for f in 60s.mp3 60s.webp 60s.html index.html; do
+            if [ ! -s "$f" ]; then
+              echo "::error::缺少产物文件 $f"
+              exit 1
+            fi
+          done
 
       - name: Commit and push changes
-        if: steps.date_check.outputs.skip != 'true'
+        if: steps.date_check.outputs.skip != 'true' && steps.build.outputs.exit_code == '0'
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add -f zhihu_daily_news.xml 60s.mp3 60s.webp 60s.html index.html 2>/dev/null || true
+          git add -f zhihu_daily_news.xml data-date.txt 60s.mp3 60s.webp 60s.html index.html
 
           if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            TODAY=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
-            git commit -m "Daily build: $TODAY [skip ci]"
-            git push
-            echo "Pushed changes for $TODAY"
+            echo "内容无变化，无需提交"
+            exit 0
           fi
+
+          TODAY=$(TZ='Asia/Shanghai' date +'%F %H:%M')
+          git commit -m "Daily build: $TODAY [skip ci]"
+          git pull --rebase --autostash origin main
+          git push
+          echo "已推送 $TODAY 的数据"
