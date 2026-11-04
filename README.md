@@ -15,7 +15,7 @@
 - **精美分享卡片** — WebP截图生成，650px宽度适配手机分享
 - **按周配色** — 12种主题颜色每周轮换，视觉不单调
 - **GitHub Pages** — 自动部署静态页面，支持音频播放
-- **定时构建** — 06:40–12:40 每 20 分钟自动检查，上游发布后 20 分钟内更新
+- **定时构建** — 06:00–12:40 每 20 分钟自动检查，上游发布后 20 分钟内更新
 
 ## 页面截图
 
@@ -79,7 +79,7 @@ python generate_webp.py
 
 ## 定时构建
 
-GitHub Actions 会在北京时间 **06:40–12:40 每 20 分钟**检查一次：
+GitHub Actions 会在北京时间 **06:00–12:40 每 20 分钟**检查一次：
 
 | 场景 | 行为 |
 |------|------|
@@ -93,12 +93,16 @@ GitHub Actions 会在北京时间 **06:40–12:40 每 20 分钟**检查一次：
 
 ### CDN 缓存（重要）
 
-站点 `60s.gbtgame.me` 走 Cloudflare 代理，HTML 会被缓存 30 分钟（源站 `Cache-Control: max-age=1800`），
-所以即使构建完成，首页也可能最多晚 30 分钟才变。建议二选一：
+站点 `60s.gbtgame.me` 走 Cloudflare 代理，首页 `/` 会被整页缓存。
+实测即使源站（GitHub Pages）已经更新，`https://60s.gbtgame.me/` 仍会返回旧的 HTML（缓存超过 30 分钟仍未刷新），
+这是"页面没更新"的第二个原因。建议二选一：
 
-1. 在 Cloudflare 给该域名加一条 Cache Rule：对 HTML 设 **Bypass cache**（或 Edge TTL 2 分钟），更新即时生效；
+1. Cloudflare 后台 → Caching → Cache Rules：对 `60s.gbtgame.me/` 设置 **Bypass cache**（或 Edge TTL 2 分钟）；
 2. 或在仓库 Secrets 里配置 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ZONE_ID`，
    工作流会在推送后自动 purge 首页缓存（未配置时该步骤自动跳过）。
+
+验证方法：`curl -sI https://60s.gbtgame.me/ | grep -i cf-cache`，
+或加一个时间戳参数（如 `/?v=123`）绕过缓存，对比两边内容是否一致。
 
 ## 许可
 
